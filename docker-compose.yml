@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tikeria-be
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - DB_DRIVER=sqlite
+      - DB_SOURCE=tikeria.db
+      - JWT_SECRET=supersecretkeytikeria123
+    restart: always
