@@ -81,20 +81,27 @@ func main() {
 		{
 			auth.POST("/register", authController.Register)
 			auth.POST("/login", authController.Login)
+			auth.GET("/me", middleware.AuthMiddleware(), authController.GetMe)
+		}
+
+		organizer := api.Group("/organizer")
+		{
+			organizer.POST("/register", authController.RegisterOrganizer)
+			organizer.POST("/verify-email", authController.VerifyEmail)
+			organizer.GET("/package", middleware.AuthMiddleware("organizer", "partner", "admin"), authController.GetOrganizerPackage)
+			organizer.GET("/events", middleware.AuthMiddleware("organizer", "partner", "admin"), eventController.GetOrganizerEvents)
+			organizer.POST("/events/:id/categories", middleware.AuthMiddleware("organizer", "partner", "admin"), eventController.AddTicketCategory)
 		}
 
 		events := api.Group("/events")
 		{
 			events.GET("", eventController.GetAllEvents)
 			events.GET("/:id", eventController.GetEventByID)
-			events.POST("", middleware.AuthMiddleware("partner", "admin"), eventController.CreateEvent)
+			events.POST("", middleware.AuthMiddleware("organizer", "partner", "admin"), eventController.CreateEvent)
 		}
 	}
 
 	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
 
 	fmt.Printf("TikeriaGO is running at : http://localhost:%s\n", port)
 	fmt.Printf("DOCS endpoint for applying : http://localhost:%s/swagger/index.html\n\n", port)

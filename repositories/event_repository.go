@@ -10,8 +10,10 @@ type EventRepository interface {
 	Create(event *models.Event) error
 	FindAll() ([]models.Event, error)
 	FindByID(id uint) (*models.Event, error)
+	FindByOrganizerID(organizerID uint) ([]models.Event, error)
 	FindTicketByID(ticketID uint) (*models.Ticket, error)
 	UpdateTicket(ticket *models.Ticket) error
+	AddTicketCategory(ticket *models.Ticket) error
 }
 
 type eventRepository struct {
@@ -52,4 +54,14 @@ func (r *eventRepository) FindTicketByID(ticketID uint) (*models.Ticket, error) 
 
 func (r *eventRepository) UpdateTicket(ticket *models.Ticket) error {
 	return r.db.Save(ticket).Error
+}
+
+func (r *eventRepository) FindByOrganizerID(organizerID uint) ([]models.Event, error) {
+	var events []models.Event
+	err := r.db.Preload("Tickets").Where("organizer_id = ?", organizerID).Find(&events).Error
+	return events, err
+}
+
+func (r *eventRepository) AddTicketCategory(ticket *models.Ticket) error {
+	return r.db.Create(ticket).Error
 }

@@ -12,6 +12,8 @@ type EventService interface {
 	CreateEvent(organizerID uint, req dto.CreateEventRequest) (*models.Event, error)
 	GetAllEvents() ([]models.Event, error)
 	GetEventByID(id uint) (*models.Event, error)
+	GetEventsByOrganizer(organizerID uint) ([]models.Event, error)
+	AddTicketCategory(organizerID uint, eventID uint, req dto.TicketInput, isPro bool) (*models.Ticket, error)
 }
 
 type eventService struct {
@@ -63,4 +65,38 @@ func (s *eventService) GetEventByID(id uint) (*models.Event, error) {
 		return nil, errors.New("event not found")
 	}
 	return event, nil
+}
+
+func (s *eventService) GetEventsByOrganizer(organizerID uint) ([]models.Event, error) {
+	return s.eventRepo.FindByOrganizerID(organizerID)
+}
+
+func (s *eventService) AddTicketCategory(organizerID uint, eventID uint, req dto.TicketInput, isPro bool) (*models.Ticket, error) {
+	event, err := s.eventRepo.FindByID(eventID)
+	if err != nil {
+		return nil, errors.New("event not found")
+	}
+
+	if event.OrganizerID != organizerID {
+		return nil, errors.New("unauthorized: you do not own this event")
+	}
+
+	// Package enforcement: Basic tier allows maximum 1 ticket category
+	if !isPro && len(event.Tickets) >= 1 {
+		return nil, errors.New("package limit reached: Basic package allows maximum 1 ticket category. Upgrade to Pro for unlimited categories.")
+	}
+
+	ticket := models.Ticket{
+		EventID:   eventID,
+		Name:      req.Name,
+		Price:     req.Price,
+		Quota:     req.Quota,
+		Available: req.Quota,
+	}
+
+	if err := s.eventRepo.AddTicketCategory(&ticket); err != nil {
+		return nil, errors.New("failed to add ticket category")
+	}
+
+	return &ticket, nil
 }

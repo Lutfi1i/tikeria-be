@@ -90,3 +90,145 @@ func (c *AuthController) Login(ctx *gin.Context) {
 		Data:    loginResponse,
 	})
 }
+
+// RegisterOrganizer godoc
+// @Summary      Register Organizer
+// @Description  Register as organizer with institution and package
+// @Tags         Auth, Organizer
+// @Accept       json
+// @Produce      json
+// @Param        request body dto.OrganizerRegisterRequest true "Organizer Registration Data"
+// @Success      201  {object}  dto.WebResponse{data=dto.UserResponse}
+// @Failure      400  {object}  dto.WebResponse
+// @Router       /api/v1/organizer/register [post]
+func (c *AuthController) RegisterOrganizer(ctx *gin.Context) {
+	var req dto.OrganizerRegisterRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.WebResponse{
+			Success: false,
+			Message: "Input not valid",
+			Errors:  err.Error(),
+		})
+		return
+	}
+
+	userResponse, err := c.authService.RegisterOrganizer(req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.WebResponse{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusCreated, dto.WebResponse{
+		Success: true,
+		Message: "Organizer account created successfully",
+		Data:    userResponse,
+	})
+}
+
+// VerifyEmail godoc
+// @Summary      Verify Email
+// @Description  Verify email with OTP code
+// @Tags         Auth, Organizer
+// @Accept       json
+// @Produce      json
+// @Param        request body dto.VerifyEmailRequest true "Verification Data"
+// @Success      200  {object}  dto.WebResponse
+// @Failure      400  {object}  dto.WebResponse
+// @Router       /api/v1/organizer/verify-email [post]
+func (c *AuthController) VerifyEmail(ctx *gin.Context) {
+	var req dto.VerifyEmailRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.WebResponse{
+			Success: false,
+			Message: "Invalid verification request",
+			Errors:  err.Error(),
+		})
+		return
+	}
+
+	if err := c.authService.VerifyEmail(req); err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.WebResponse{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.WebResponse{
+		Success: true,
+		Message: "Email verified successfully",
+	})
+}
+
+// GetMe godoc
+// @Summary      Get Current User Profile
+// @Description  Get profile of authenticated user
+// @Tags         Auth
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  dto.WebResponse{data=dto.UserResponse}
+// @Failure      401  {object}  dto.WebResponse
+// @Router       /api/v1/auth/me [get]
+func (c *AuthController) GetMe(ctx *gin.Context) {
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, dto.WebResponse{
+			Success: false,
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	user, err := c.authService.GetMe(userID.(uint))
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, dto.WebResponse{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.WebResponse{
+		Success: true,
+		Message: "Profile retrieved successfully",
+		Data:    user,
+	})
+}
+
+// GetOrganizerPackage godoc
+// @Summary      Get Organizer Package
+// @Description  Get current package details and limits
+// @Tags         Organizer
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  dto.WebResponse{data=dto.OrganizerPackageResponse}
+// @Failure      401  {object}  dto.WebResponse
+// @Router       /api/v1/organizer/package [get]
+func (c *AuthController) GetOrganizerPackage(ctx *gin.Context) {
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, dto.WebResponse{
+			Success: false,
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	pkg, err := c.authService.GetOrganizerPackage(userID.(uint))
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, dto.WebResponse{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.WebResponse{
+		Success: true,
+		Message: "Package details retrieved successfully",
+		Data:    pkg,
+	})
+}

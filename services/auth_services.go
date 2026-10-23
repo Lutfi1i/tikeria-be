@@ -11,6 +11,10 @@ import (
 
 type AuthService interface {
 	Register(req dto.RegisterRequest) (*dto.UserResponse, error)
+	RegisterOrganizer(req dto.OrganizerRegisterRequest) (*dto.UserResponse, error)
+	VerifyEmail(req dto.VerifyEmailRequest) error
+	GetMe(userID uint) (*dto.UserResponse, error)
+	GetOrganizerPackage(userID uint) (*dto.OrganizerPackageResponse, error)
 	Login(req dto.LoginRequest) (*dto.LoginResponse, error)
 }
 
@@ -58,6 +62,87 @@ func (s *authService) Register(req dto.RegisterRequest) (*dto.UserResponse, erro
 		CreatedAt: user.CreatedAt.Format("2006-01-02 15:04:05"),
 	}
 	return response, nil
+}
+
+func (s *authService) RegisterOrganizer(req dto.OrganizerRegisterRequest) (*dto.UserResponse, error) {
+	existingUser, _ := s.userRepo.FindByEmail(req.Email)
+	if existingUser != nil {
+		return nil, errors.New("email was already registered, try other email")
+	}
+
+	hashedPassword, err := utils.HashPassword(req.Password)
+	if err != nil {
+		return nil, errors.New("failed to hash password")
+	}
+
+	user := models.User{
+		Name:     req.Name,
+		Email:    req.Email,
+		Password: hashedPassword,
+		Role:     "organizer",
+	}
+
+	err = s.userRepo.Create(&user)
+	if err != nil {
+		return nil, errors.New("failed to register organizer")
+	}
+
+	response := &dto.UserResponse{
+		ID:        user.ID,
+		Name:      user.Name,
+		Email:     user.Email,
+		Role:      user.Role,
+		CreatedAt: user.CreatedAt.Format("2006-01-02 15:04:05"),
+	}
+	return response, nil
+}
+
+func (s *authService) VerifyEmail(req dto.VerifyEmailRequest) error {
+	user, err := s.userRepo.FindByEmail(req.Email)
+	if err != nil || user == nil {
+		return errors.New("user not found")
+	}
+	if req.OTP == "" {
+		return errors.New("OTP code is required")
+	}
+	// In MVP simulation, OTP verification succeeds
+	return nil
+}
+
+func (s *authService) GetMe(userID uint) (*dto.UserResponse, error) {
+	user, err := s.userRepo.FindByID(userID)
+	if err != nil || user == nil {
+		return nil, errors.New("user not found")
+	}
+
+	return &dto.UserResponse{
+		ID:        user.ID,
+		Name:      user.Name,
+		Email:     user.Email,
+		Role:      user.Role,
+		CreatedAt: user.CreatedAt.Format("2006-01-02 15:04:05"),
+	}, nil
+}
+
+func (s *authService) GetOrganizerPackage(userID uint) (*dto.OrganizerPackageResponse, error) {
+	user, err := s.userRepo.FindByID(userID)
+	if err != nil || user == nil {
+		return nil, errors.New("user not found")
+	}
+
+	// Default organizer package is Basic with tier limits as specified in Tikeria PRD
+	return &dto.OrganizerPackageResponse{
+		PackageCode:        "basic",
+		PackageName:        "Basic (Free)",
+		MaxActiveEvent:     1,
+		MaxTicketCategory:  1,
+		MaxQuotaPerEvent:   500,
+		MaxScannerAccounts: 2,
+		IsMultiCategory:    false,
+		ReportPerCategory:  false,
+		ExportCSV:          false,
+		CustomBranding:     false,
+	}, nil
 }
 
 func (s *authService) Login(req dto.LoginRequest) (*dto.LoginResponse, error) {
