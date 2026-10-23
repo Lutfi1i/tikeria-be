@@ -8,11 +8,14 @@ import (
 
 type EventRepository interface {
 	Create(event *models.Event) error
+	Update(event *models.Event) error
 	FindAll() ([]models.Event, error)
 	FindByID(id uint) (*models.Event, error)
 	FindByOrganizerID(organizerID uint) ([]models.Event, error)
+	CountActiveEventsByOrganizerID(organizerID uint) (int64, error)
 	FindTicketByID(ticketID uint) (*models.Ticket, error)
 	UpdateTicket(ticket *models.Ticket) error
+	DeleteTicket(ticketID uint) error
 	AddTicketCategory(ticket *models.Ticket) error
 }
 
@@ -26,6 +29,10 @@ func NewEventRepository(db *gorm.DB) EventRepository {
 
 func (r *eventRepository) Create(event *models.Event) error {
 	return r.db.Create(event).Error
+}
+
+func (r *eventRepository) Update(event *models.Event) error {
+	return r.db.Save(event).Error
 }
 
 func (r *eventRepository) FindAll() ([]models.Event, error) {
@@ -43,6 +50,20 @@ func (r *eventRepository) FindByID(id uint) (*models.Event, error) {
 	return &event, nil
 }
 
+func (r *eventRepository) FindByOrganizerID(organizerID uint) ([]models.Event, error) {
+	var events []models.Event
+	err := r.db.Preload("Tickets").Where("organizer_id = ?", organizerID).Find(&events).Error
+	return events, err
+}
+
+func (r *eventRepository) CountActiveEventsByOrganizerID(organizerID uint) (int64, error) {
+	var count int64
+	err := r.db.Model(&models.Event{}).
+		Where("organizer_id = ? AND status IN ?", organizerID, []string{"Draft", "Waiting Approval", "Published", "published"}).
+		Count(&count).Error
+	return count, err
+}
+
 func (r *eventRepository) FindTicketByID(ticketID uint) (*models.Ticket, error) {
 	var ticket models.Ticket
 	err := r.db.First(&ticket, ticketID).Error
@@ -56,10 +77,8 @@ func (r *eventRepository) UpdateTicket(ticket *models.Ticket) error {
 	return r.db.Save(ticket).Error
 }
 
-func (r *eventRepository) FindByOrganizerID(organizerID uint) ([]models.Event, error) {
-	var events []models.Event
-	err := r.db.Preload("Tickets").Where("organizer_id = ?", organizerID).Find(&events).Error
-	return events, err
+func (r *eventRepository) DeleteTicket(ticketID uint) error {
+	return r.db.Delete(&models.Ticket{}, ticketID).Error
 }
 
 func (r *eventRepository) AddTicketCategory(ticket *models.Ticket) error {

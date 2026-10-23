@@ -2,6 +2,8 @@ package services
 
 import (
 	"errors"
+	"strings"
+	"time"
 
 	"tikeria-be/dto"
 	"tikeria-be/models"
@@ -12,21 +14,48 @@ import (
 type AuthService interface {
 	Register(req dto.RegisterRequest) (*dto.UserResponse, error)
 	RegisterOrganizer(req dto.OrganizerRegisterRequest) (*dto.UserResponse, error)
-	VerifyEmail(req dto.VerifyEmailRequest) error
+	VerifyEmail(req dto.VerifyEmailRequest) (*dto.UserResponse, error)
 	GetMe(userID uint) (*dto.UserResponse, error)
 	GetOrganizerPackage(userID uint) (*dto.OrganizerPackageResponse, error)
 	Login(req dto.LoginRequest) (*dto.LoginResponse, error)
 }
 
 type authService struct {
-	userRepo repositories.UserRepository
+	userRepo  repositories.UserRepository
+	eventRepo repositories.EventRepository
 }
 
-func NewAuthService(userRepo repositories.UserRepository) AuthService {
-	return &authService{userRepo: userRepo}
+func NewAuthService(userRepo repositories.UserRepository, eventRepos ...repositories.EventRepository) AuthService {
+	var evRepo repositories.EventRepository
+	if len(eventRepos) > 0 {
+		evRepo = eventRepos[0]
+	}
+	return &authService{userRepo: userRepo, eventRepo: evRepo}
+}
+
+func toUserResponse(user *models.User) *dto.UserResponse {
+	return &dto.UserResponse{
+		ID:            user.ID,
+		Name:          user.Name,
+		OrganizerName: user.Name,
+		Email:         user.Email,
+		Role:          user.Role,
+		Package:       user.Package,
+		PackageSince:  user.PackageSince,
+		WhatsApp:      user.WhatsApp,
+		Institution:   user.Institution,
+		City:          user.City,
+		OrganizerType: user.OrganizerType,
+		EmailVerified: user.EmailVerified,
+		CreatedAt:     user.CreatedAt.Format("2006-01-02 15:04:05"),
+	}
 }
 
 func (s *authService) Register(req dto.RegisterRequest) (*dto.UserResponse, error) {
+	if req.ConfirmPassword != "" && req.ConfirmPassword != req.Password {
+		return nil, errors.New("confirm_password does not match password")
+	}
+
 	existingUser, _ := s.userRepo.FindByEmail(req.Email)
 	if existingUser != nil {
 		return nil, errors.New("email was already registered, try other email")
@@ -42,8 +71,14 @@ func (s *authService) Register(req dto.RegisterRequest) (*dto.UserResponse, erro
 		role = "buyer"
 	}
 
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		parts := strings.Split(req.Email, "@")
+		name = parts[0]
+	}
+
 	user := models.User{
-		Name:     req.Name,
+		Name:     name,
 		Email:    req.Email,
 		Password: hashedPassword,
 		Role:     role,
@@ -54,17 +89,33 @@ func (s *authService) Register(req dto.RegisterRequest) (*dto.UserResponse, erro
 		return nil, errors.New("failed to register user")
 	}
 
-	response := &dto.UserResponse{
-		ID:        user.ID,
-		Name:      user.Name,
-		Email:     user.Email,
-		Role:      user.Role,
-		CreatedAt: user.CreatedAt.Format("2006-01-02 15:04:05"),
-	}
-	return response, nil
+	return toUserResponse(&user), nil
 }
 
 func (s *authService) RegisterOrganizer(req dto.OrganizerRegisterRequest) (*dto.UserResponse, error) {
+	name := strings.TrimSpace(req.OrganizerName)
+	if name == "" {
+		name = strings.TrimSpace(req.Name)
+	}
+	if len(name) < 3 {
+		return nil, errors.New("organizer_name or name is required (min 3 characters)")
+	}
+
+	orgType := strings.TrimSpace(req.OrganizerType)
+	if orgType == "" {
+		orgType = "school_campus"
+	}
+	if orgType == "public_later" {
+		return nil, errors.New("organizer_type public_later is post-MVP; only school_campus is supported in MVP")
+	}
+	if orgType != "school_campus" {
+		return nil, errors.New("invalid organizer_type: must be school_campus")
+	}
+
+	if strings.TrimSpace(req.Institution) == "" || strings.TrimSpace(req.City) == "" {
+		return nil, errors.New("institution and city are required for school_campus organizer")
+	}
+
 	existingUser, _ := s.userRepo.FindByEmail(req.Email)
 	if existingUser != nil {
 		return nil, errors.New("email was already registered, try other email")
@@ -76,10 +127,17 @@ func (s *authService) RegisterOrganizer(req dto.OrganizerRegisterRequest) (*dto.
 	}
 
 	user := models.User{
-		Name:     req.Name,
-		Email:    req.Email,
-		Password: hashedPassword,
-		Role:     "organizer",
+		Name:          name,
+		Email:         req.Email,
+		Password:      hashedPassword,
+		Role:          "organizer",
+		WhatsApp:      req.WhatsApp,
+		OrganizerType: orgType,
+		Institution:   req.Institution,
+		City:          req.City,
+		Package:       "basic",
+		PackageSince:  time.Now().Format("2006-01-02"),
+		EmailVerified: false,
 	}
 
 	err = s.userRepo.Create(&user)
@@ -87,26 +145,28 @@ func (s *authService) RegisterOrganizer(req dto.OrganizerRegisterRequest) (*dto.
 		return nil, errors.New("failed to register organizer")
 	}
 
-	response := &dto.UserResponse{
-		ID:        user.ID,
-		Name:      user.Name,
-		Email:     user.Email,
-		Role:      user.Role,
-		CreatedAt: user.CreatedAt.Format("2006-01-02 15:04:05"),
-	}
-	return response, nil
+	return toUserResponse(&user), nil
 }
 
-func (s *authService) VerifyEmail(req dto.VerifyEmailRequest) error {
+func (s *authService) VerifyEmail(req dto.VerifyEmailRequest) (*dto.UserResponse, error) {
 	user, err := s.userRepo.FindByEmail(req.Email)
 	if err != nil || user == nil {
-		return errors.New("user not found")
+		return nil, errors.New("user not found")
 	}
-	if req.OTP == "" {
-		return errors.New("OTP code is required")
+	if strings.TrimSpace(req.OTP) == "" {
+		return nil, errors.New("OTP code is required")
 	}
-	// In MVP simulation, OTP verification succeeds
-	return nil
+
+	user.EmailVerified = true
+	if user.Package == "" {
+		user.Package = "basic"
+	}
+	if user.PackageSince == "" {
+		user.PackageSince = time.Now().Format("2006-01-02")
+	}
+	_ = s.userRepo.Update(user)
+
+	return toUserResponse(user), nil
 }
 
 func (s *authService) GetMe(userID uint) (*dto.UserResponse, error) {
@@ -115,13 +175,7 @@ func (s *authService) GetMe(userID uint) (*dto.UserResponse, error) {
 		return nil, errors.New("user not found")
 	}
 
-	return &dto.UserResponse{
-		ID:        user.ID,
-		Name:      user.Name,
-		Email:     user.Email,
-		Role:      user.Role,
-		CreatedAt: user.CreatedAt.Format("2006-01-02 15:04:05"),
-	}, nil
+	return toUserResponse(user), nil
 }
 
 func (s *authService) GetOrganizerPackage(userID uint) (*dto.OrganizerPackageResponse, error) {
@@ -130,18 +184,82 @@ func (s *authService) GetOrganizerPackage(userID uint) (*dto.OrganizerPackageRes
 		return nil, errors.New("user not found")
 	}
 
-	// Default organizer package is Basic with tier limits as specified in Tikeria PRD
+	pkg := strings.ToLower(strings.TrimSpace(user.Package))
+	if pkg == "" {
+		pkg = "basic"
+	}
+
+	var activeEvents int
+	if s.eventRepo != nil {
+		cnt, err := s.eventRepo.CountActiveEventsByOrganizerID(userID)
+		if err == nil {
+			activeEvents = int(cnt)
+		}
+	}
+
+	if pkg == "pro" {
+		return &dto.OrganizerPackageResponse{
+			Package:            "pro",
+			PackageCode:        "pro",
+			PackageName:        "Pro",
+			MaxActiveEvent:     0,
+			MaxTicketCategory:  0,
+			MaxQuotaPerEvent:   0,
+			MaxScannerAccounts: 10,
+			IsMultiCategory:    true,
+			ReportPerCategory:  true,
+			ExportCSV:          true,
+			CustomBranding:     true,
+			Limits: dto.PackageLimits{
+				MaxActiveEvent:     0,
+				MaxTicketCategory:  0,
+				MaxQuotaPerEvent:   0,
+				MaxScannerAccounts: 10,
+			},
+			Features: dto.PackageFeatures{
+				MultiCategory:     true,
+				ReportPerCategory: true,
+				ExportCSV:         true,
+				CustomBranding:    true,
+			},
+			Usage: dto.PackageUsage{
+				ActiveEvents:    activeEvents,
+				CanCreateEvent:  true,
+				UpgradeRequired: false,
+			},
+		}, nil
+	}
+
+	canCreate := activeEvents < 1
 	return &dto.OrganizerPackageResponse{
+		Package:            "basic",
 		PackageCode:        "basic",
 		PackageName:        "Basic (Free)",
 		MaxActiveEvent:     1,
 		MaxTicketCategory:  1,
-		MaxQuotaPerEvent:   500,
-		MaxScannerAccounts: 2,
+		MaxQuotaPerEvent:   1000,
+		MaxScannerAccounts: 1,
 		IsMultiCategory:    false,
 		ReportPerCategory:  false,
 		ExportCSV:          false,
 		CustomBranding:     false,
+		Limits: dto.PackageLimits{
+			MaxActiveEvent:     1,
+			MaxTicketCategory:  1,
+			MaxQuotaPerEvent:   1000,
+			MaxScannerAccounts: 1,
+		},
+		Features: dto.PackageFeatures{
+			MultiCategory:     false,
+			ReportPerCategory: false,
+			ExportCSV:         false,
+			CustomBranding:    false,
+		},
+		Usage: dto.PackageUsage{
+			ActiveEvents:    activeEvents,
+			CanCreateEvent:  canCreate,
+			UpgradeRequired: !canCreate,
+		},
 	}, nil
 }
 
@@ -160,15 +278,13 @@ func (s *authService) Login(req dto.LoginRequest) (*dto.LoginResponse, error) {
 		return nil, errors.New("error making token")
 	}
 
+	userResp := toUserResponse(user)
 	response := &dto.LoginResponse{
-		Token: token,
-		User: dto.UserResponse{
-			ID:        user.ID,
-			Name:      user.Name,
-			Email:     user.Email,
-			Role:      user.Role,
-			CreatedAt: user.CreatedAt.Format("2006-01-02 15:04:05"),
-		},
+		Token:       token,
+		AccessToken: token,
+		TokenType:   "Bearer",
+		ExpiresIn:   900,
+		User:        *userResp,
 	}
 
 	return response, nil

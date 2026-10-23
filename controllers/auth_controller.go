@@ -149,7 +149,8 @@ func (c *AuthController) VerifyEmail(ctx *gin.Context) {
 		return
 	}
 
-	if err := c.authService.VerifyEmail(req); err != nil {
+	userResp, err := c.authService.VerifyEmail(req)
+	if err != nil {
 		ctx.JSON(http.StatusBadRequest, dto.WebResponse{
 			Success: false,
 			Message: err.Error(),
@@ -160,6 +161,7 @@ func (c *AuthController) VerifyEmail(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, dto.WebResponse{
 		Success: true,
 		Message: "Email verified successfully",
+		Data:    userResp,
 	})
 }
 
