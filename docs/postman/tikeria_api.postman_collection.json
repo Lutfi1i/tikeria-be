@@ -1,0 +1,170 @@
+{
+  "info": {
+    "name": "Tikeria API Gateway (Backend + ERP)",
+    "description": "Collection for Tikeria Buyer Web, Organizer Web, Flutter Mobile, and Admin Approval workflows.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080/api"
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Auth & Buyer",
+      "item": [
+        {
+          "name": "Register Buyer",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Budi Santoso\",\n  \"email\": \"buyer@tikeria.id\",\n  \"password\": \"password123\",\n  \"confirm_password\": \"password123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"osis@sman1.sch.id\",\n  \"password\": \"secret123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Current User (/auth/me)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/auth/me"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Organizer Onboarding & Package",
+      "item": [
+        {
+          "name": "Register Organizer",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/organizer/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"organizer_name\": \"OSIS SMAN 1 Jakarta\",\n  \"email\": \"osis@sman1.sch.id\",\n  \"password\": \"secret123\",\n  \"whatsapp\": \"081234567890\",\n  \"organizer_type\": \"school_campus\",\n  \"institution\": \"SMA Negeri 1 Jakarta\",\n  \"city\": \"Jakarta\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Verify Organizer Email OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/organizer/verify-email",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"osis@sman1.sch.id\",\n  \"otp\": \"123456\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Organizer Profile (/organizer/me)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/organizer/me"
+          }
+        },
+        {
+          "name": "Get Organizer Package & Usage (/organizer/package)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/organizer/package"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Organizer Event & Category Wizard",
+      "item": [
+        {
+          "name": "Create Event Draft",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/organizer/events",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Pensi SMAN 1 2026\",\n  \"description\": \"Pentas Seni Tahunan SMAN 1 Jakarta\",\n  \"city\": \"Jakarta\",\n  \"venue_name\": \"Lapangan Utama SMAN 1\",\n  \"venue_address\": \"Jl. Budi Utomo No. 7\",\n  \"event_template\": \"pensi\",\n  \"pic_name\": \"Bapak Hendra\",\n  \"pic_whatsapp\": \"081199887766\",\n  \"event_date\": \"2026-12-20T19:00:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Add Ticket Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{base_url}}/organizer/events/1/categories",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_name\": \"Reguler Pensi\",\n  \"price\": 75000,\n  \"quota\": 500,\n  \"max_ticket_per_transaction\": 5\n}"
+            }
+          }
+        },
+        {
+          "name": "Submit Event for Approval",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{base_url}}/organizer/events/1/submit-approval"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Public Event Browsing",
+      "item": [
+        {
+          "name": "List All Events",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/events"
+          }
+        },
+        {
+          "name": "Get Event Detail",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/events/1"
+          }
+        },
+        {
+          "name": "Get Event Ticket Categories",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/events/1/categories"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,125 @@
+{
+  "actions": [],
+  "allow_rename": 0,
+  "autoname": "CAT-.YYYY.-.#####",
+  "creation": "2026-09-18 00:00:00.000000",
+  "doctype": "DocType",
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "event",
+    "category_name",
+    "price",
+    "quota",
+    "sold_quantity",
+    "held_quantity",
+    "description",
+    "layout_image",
+    "max_ticket_per_transaction",
+    "is_active"
+  ],
+  "fields": [
+    {
+      "fieldname": "event",
+      "fieldtype": "Link",
+      "label": "Event",
+      "options": "Tikeria Event",
+      "reqd": 1
+    },
+    {
+      "fieldname": "category_name",
+      "fieldtype": "Data",
+      "label": "Category Name",
+      "reqd": 1
+    },
+    {
+      "fieldname": "price",
+      "fieldtype": "Currency",
+      "label": "Price",
+      "reqd": 1,
+      "default": "0"
+    },
+    {
+      "fieldname": "quota",
+      "fieldtype": "Int",
+      "label": "Quota",
+      "reqd": 1,
+      "default": "100"
+    },
+    {
+      "fieldname": "sold_quantity",
+      "fieldtype": "Int",
+      "label": "Sold Quantity",
+      "default": "0"
+    },
+    {
+      "fieldname": "held_quantity",
+      "fieldtype": "Int",
+      "label": "Held Quantity",
+      "default": "0"
+    },
+    {
+      "fieldname": "description",
+      "fieldtype": "Small Text",
+      "label": "Description"
+    },
+    {
+      "fieldname": "layout_image",
+      "fieldtype": "Attach Image",
+      "label": "Layout Image"
+    },
+    {
+      "fieldname": "max_ticket_per_transaction",
+      "fieldtype": "Int",
+      "label": "Max Ticket Per Transaction",
+      "reqd": 1,
+      "default": "5"
+    },
+    {
+      "fieldname": "is_active",
+      "fieldtype": "Check",
+      "label": "Is Active",
+      "default": "1"
+    }
+  ],
+  "index_web_pages_for_search": 1,
+  "issingle": 0,
+  "istable": 0,
+  "modified": "2026-10-03 20:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Tikeria",
+  "name": "Tikeria Ticket Category",
+  "naming_rule": "Random",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "Tikeria Admin",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "Tikeria Organizer",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0
+    },
+    {
+      "role": "All",
+      "read": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 1
+}

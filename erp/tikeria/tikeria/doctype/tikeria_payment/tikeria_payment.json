@@ -1,0 +1,114 @@
+{
+  "actions": [],
+  "allow_rename": 0,
+  "autoname": "PAY-.YYYY.-.#####",
+  "creation": "2026-09-18 00:00:00.000000",
+  "doctype": "DocType",
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "order",
+    "invoice_number",
+    "payment_method",
+    "amount",
+    "status",
+    "paid_at",
+    "expired_at",
+    "gateway_reference",
+    "raw_callback_payload"
+  ],
+  "fields": [
+    {
+      "fieldname": "order",
+      "fieldtype": "Link",
+      "label": "Order",
+      "options": "Tikeria Order",
+      "reqd": 1
+    },
+    {
+      "fieldname": "invoice_number",
+      "fieldtype": "Data",
+      "label": "Invoice Number",
+      "reqd": 1
+    },
+    {
+      "fieldname": "payment_method",
+      "fieldtype": "Select",
+      "label": "Payment Method",
+      "options": "Simulation",
+      "default": "Simulation",
+      "reqd": 1
+    },
+    {
+      "fieldname": "amount",
+      "fieldtype": "Currency",
+      "label": "Amount",
+      "reqd": 1
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "label": "Status",
+      "options": "Waiting\nSuccess\nFailed\nExpired",
+      "default": "Waiting",
+      "reqd": 1
+    },
+    {
+      "fieldname": "paid_at",
+      "fieldtype": "Datetime",
+      "label": "Paid At"
+    },
+    {
+      "fieldname": "expired_at",
+      "fieldtype": "Datetime",
+      "label": "Expired At"
+    },
+    {
+      "fieldname": "gateway_reference",
+      "fieldtype": "Data",
+      "label": "Gateway Reference"
+    },
+    {
+      "fieldname": "raw_callback_payload",
+      "fieldtype": "Code",
+      "label": "Raw Callback Payload",
+      "options": "JSON"
+    }
+  ],
+  "index_web_pages_for_search": 1,
+  "issingle": 0,
+  "istable": 0,
+  "modified": "2026-10-03 20:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Tikeria",
+  "name": "Tikeria Payment",
+  "naming_rule": "Random",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "Tikeria Admin",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0
+    },
+    {
+      "role": "Tikeria Organizer",
+      "read": 1,
+      "write": 0,
+      "create": 0,
+      "delete": 0
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 1
+}

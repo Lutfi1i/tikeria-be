@@ -1,61 +1,25 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
+	"time"
 
 	"tikeria-be/config"
 	"tikeria-be/controllers"
 	_ "tikeria-be/docs"
-	"tikeria-be/middleware"
 	"tikeria-be/repositories"
+	"tikeria-be/routes"
 	"tikeria-be/services"
+	"tikeria-be/worker"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
-
-func registerAPIRoutes(group *gin.RouterGroup, authController *controllers.AuthController, eventController *controllers.EventController) {
-	auth := group.Group("/auth")
-	{
-		auth.POST("/register", authController.Register)
-		auth.POST("/login", authController.Login)
-		auth.GET("/me", middleware.AuthMiddleware(), authController.GetMe)
-	}
-
-	organizer := group.Group("/organizer")
-	{
-		organizer.POST("/register", authController.RegisterOrganizer)
-		organizer.POST("/verify-email", authController.VerifyEmail)
-		organizer.GET("/me", middleware.AuthMiddleware("organizer", "partner", "admin"), authController.GetMe)
-		organizer.GET("/package", middleware.AuthMiddleware("organizer", "partner", "admin"), authController.GetOrganizerPackage)
-		organizer.GET("/events", middleware.AuthMiddleware("organizer", "partner", "admin"), eventController.GetOrganizerEvents)
-		organizer.POST("/events", middleware.AuthMiddleware("organizer", "partner", "admin"), eventController.CreateEvent)
-		organizer.PUT("/events/:id", middleware.AuthMiddleware("organizer", "partner", "admin"), eventController.UpdateEvent)
-		organizer.POST("/events/:id/categories", middleware.AuthMiddleware("organizer", "partner", "admin"), eventController.AddTicketCategory)
-		organizer.PUT("/events/:id/categories/:category_id", middleware.AuthMiddleware("organizer", "partner", "admin"), eventController.UpdateTicketCategory)
-		organizer.DELETE("/events/:id/categories/:category_id", middleware.AuthMiddleware("organizer", "partner", "admin"), eventController.DeleteTicketCategory)
-		organizer.POST("/events/:id/submit-approval", middleware.AuthMiddleware("organizer", "partner", "admin"), eventController.SubmitEventApproval)
-	}
-
-	admin := group.Group("/admin")
-	{
-		admin.POST("/events/:id/approve", middleware.AuthMiddleware("admin"), eventController.ApproveEvent)
-		admin.POST("/events/:id/reject", middleware.AuthMiddleware("admin"), eventController.RejectEvent)
-	}
-
-	events := group.Group("/events")
-	{
-		events.GET("", eventController.GetAllEvents)
-		events.GET("/:id", eventController.GetEventByID)
-		events.GET("/:id/categories", eventController.GetEventCategories)
-		events.POST("", middleware.AuthMiddleware("organizer", "partner", "admin"), eventController.CreateEvent)
-	}
-}
 
 // @title           Tikeria Ticketing Platform API
 // @version         1.0
@@ -77,7 +41,13 @@ func main() {
 		log.Println("env file is not found")
 	}
 
+	cfg := config.LoadConfig()
 	db := config.InitDatabase()
+
+	// Start background Ticket Hold Expiry Worker (runs every 1 minute)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	worker.StartHoldExpiryWorker(ctx, db, 1*time.Minute)
 
 	userRepo := repositories.NewUserRepository(db)
 	eventRepo := repositories.NewEventRepository(db)
@@ -106,27 +76,22 @@ func main() {
 
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"app":     "Tikeria API",
-			"status":  "online",
-			"swagger": "http://localhost:8080/swagger/index.html",
+			"app":                 "Tikeria API",
+			"status":              "online",
+			"frappe_sync_enabled": cfg.FrappeSyncEnabled,
+			"swagger":             fmt.Sprintf("http://localhost:%s/swagger/index.html", cfg.Port),
 		})
 	})
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// Register routes under both /api and /api/v1 for full compatibility
-	registerAPIRoutes(r.Group("/api"), authController, eventController)
-	registerAPIRoutes(r.Group("/api/v1"), authController, eventController)
+	// Register modular domain routes under both /api and /api/v1
+	routes.RegisterAPIRoutes(r, authController, eventController)
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
+	fmt.Printf("TikeriaGO is running at : http://localhost:%s\n", cfg.Port)
+	fmt.Printf("DOCS endpoint for applying : http://localhost:%s/swagger/index.html\n\n", cfg.Port)
 
-	fmt.Printf("TikeriaGO is running at : http://localhost:%s\n", port)
-	fmt.Printf("DOCS endpoint for applying : http://localhost:%s/swagger/index.html\n\n", port)
-
-	if err := r.Run(":" + port); err != nil {
+	if err := r.Run(":" + cfg.Port); err != nil {
 		log.Fatalf("Failed to running the server: %v", err)
 	}
 }

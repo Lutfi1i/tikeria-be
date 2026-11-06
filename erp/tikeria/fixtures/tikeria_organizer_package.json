@@ -1,0 +1,32 @@
+[
+  {
+    "doctype": "Tikeria Organizer Package",
+    "package_code": "basic",
+    "package_name": "Basic (Gratis)",
+    "price": 0,
+    "max_active_event": 1,
+    "max_ticket_category": 1,
+    "max_quota_per_event": 1000,
+    "max_scanner_accounts": 1,
+    "is_multi_category": 0,
+    "report_per_category": 0,
+    "export_csv": 0,
+    "custom_branding": 0,
+    "is_active": 1
+  },
+  {
+    "doctype": "Tikeria Organizer Package",
+    "package_code": "pro",
+    "package_name": "Pro",
+    "price": 0,
+    "max_active_event": 0,
+    "max_ticket_category": 0,
+    "max_quota_per_event": 0,
+    "max_scanner_accounts": 10,
+    "is_multi_category": 1,
+    "report_per_category": 1,
+    "export_csv": 1,
+    "custom_branding": 1,
+    "is_active": 1
+  }
+]

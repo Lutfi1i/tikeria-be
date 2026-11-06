@@ -1,0 +1,107 @@
+{
+  "actions": [],
+  "allow_rename": 0,
+  "autoname": "PART-.YYYY.-.#####",
+  "creation": "2026-09-18 00:00:00.000000",
+  "doctype": "DocType",
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "order",
+    "full_name_ktp",
+    "email",
+    "phone",
+    "nik",
+    "birth_date",
+    "gender",
+    "masked_nik"
+  ],
+  "fields": [
+    {
+      "fieldname": "order",
+      "fieldtype": "Link",
+      "label": "Order",
+      "options": "Tikeria Order",
+      "reqd": 1,
+      "unique": 1
+    },
+    {
+      "fieldname": "full_name_ktp",
+      "fieldtype": "Data",
+      "label": "Full Name KTP",
+      "reqd": 1
+    },
+    {
+      "fieldname": "email",
+      "fieldtype": "Data",
+      "label": "Email",
+      "reqd": 1
+    },
+    {
+      "fieldname": "phone",
+      "fieldtype": "Data",
+      "label": "Phone",
+      "reqd": 1
+    },
+    {
+      "fieldname": "nik",
+      "fieldtype": "Data",
+      "label": "NIK",
+      "reqd": 1
+    },
+    {
+      "fieldname": "birth_date",
+      "fieldtype": "Date",
+      "label": "Birth Date",
+      "reqd": 1
+    },
+    {
+      "fieldname": "gender",
+      "fieldtype": "Select",
+      "label": "Gender",
+      "options": "Pria\nWanita\nPrefer not to say",
+      "reqd": 1
+    },
+    {
+      "fieldname": "masked_nik",
+      "fieldtype": "Data",
+      "label": "Masked NIK"
+    }
+  ],
+  "index_web_pages_for_search": 1,
+  "issingle": 0,
+  "istable": 0,
+  "modified": "2026-10-03 20:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Tikeria",
+  "name": "Tikeria Participant Detail",
+  "naming_rule": "Random",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "Tikeria Admin",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0
+    },
+    {
+      "role": "Tikeria Organizer",
+      "read": 1,
+      "write": 0,
+      "create": 0,
+      "delete": 0
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 1
+}

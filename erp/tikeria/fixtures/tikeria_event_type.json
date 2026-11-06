@@ -1,0 +1,38 @@
+[
+  {
+    "doctype": "Tikeria Event Type",
+    "event_type_name": "Pensi",
+    "description": "Pentas seni sekolah atau kampus",
+    "is_active": 1
+  },
+  {
+    "doctype": "Tikeria Event Type",
+    "event_type_name": "Konser",
+    "description": "Konser musik",
+    "is_active": 1
+  },
+  {
+    "doctype": "Tikeria Event Type",
+    "event_type_name": "Festival Musik",
+    "description": "Festival musik multi-stage",
+    "is_active": 1
+  },
+  {
+    "doctype": "Tikeria Event Type",
+    "event_type_name": "Seminar",
+    "description": "Seminar dan talkshow",
+    "is_active": 1
+  },
+  {
+    "doctype": "Tikeria Event Type",
+    "event_type_name": "Workshop",
+    "description": "Pelatihan dan workshop praktis",
+    "is_active": 1
+  },
+  {
+    "doctype": "Tikeria Event Type",
+    "event_type_name": "Lainnya",
+    "description": "Event umum lainnya",
+    "is_active": 1
+  }
+]

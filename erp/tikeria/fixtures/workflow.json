@@ -1,0 +1,57 @@
+[
+  {
+    "doctype": "Workflow",
+    "workflow_name": "Tikeria Event Approval",
+    "document_type": "Tikeria Event",
+    "is_active": 1,
+    "workflow_state_field": "status",
+    "states": [
+      {
+        "state": "Draft",
+        "doc_status": "0",
+        "allow_edit": "Tikeria Organizer"
+      },
+      {
+        "state": "Waiting Approval",
+        "doc_status": "0",
+        "allow_edit": "Tikeria Admin"
+      },
+      {
+        "state": "Published",
+        "doc_status": "1",
+        "allow_edit": "Tikeria Admin"
+      },
+      {
+        "state": "Reject",
+        "doc_status": "0",
+        "allow_edit": "Tikeria Organizer"
+      }
+    ],
+    "transitions": [
+      {
+        "state": "Draft",
+        "action": "Submit Approval",
+        "next_state": "Waiting Approval",
+        "allowed": "Tikeria Organizer"
+      },
+      {
+        "state": "Waiting Approval",
+        "action": "Approve",
+        "next_state": "Published",
+        "allowed": "Tikeria Admin"
+      },
+      {
+        "state": "Waiting Approval",
+        "action": "Reject",
+        "next_state": "Reject",
+        "allowed": "Tikeria Admin"
+      },
+      {
+        "state": "Reject",
+        "action": "Resubmit Approval",
+        "next_state": "Waiting Approval",
+        "allowed": "Tikeria Organizer"
+      }
+    ]
+  }
+]

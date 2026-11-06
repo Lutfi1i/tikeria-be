@@ -1,0 +1,86 @@
+{
+  "actions": [],
+  "allow_rename": 0,
+  "autoname": "format:SCN-{organizer}-{#####}",
+  "creation": "2026-09-18 00:00:00.000000",
+  "doctype": "DocType",
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "organizer",
+    "scanner_user",
+    "event",
+    "is_active",
+    "assigned_at"
+  ],
+  "fields": [
+    {
+      "fieldname": "organizer",
+      "fieldtype": "Link",
+      "label": "Organizer",
+      "options": "Tikeria Organizer Profile",
+      "reqd": 1
+    },
+    {
+      "fieldname": "scanner_user",
+      "fieldtype": "Link",
+      "label": "Scanner User",
+      "options": "User",
+      "reqd": 1
+    },
+    {
+      "fieldname": "event",
+      "fieldtype": "Link",
+      "label": "Event",
+      "options": "Tikeria Event",
+      "reqd": 1
+    },
+    {
+      "fieldname": "is_active",
+      "fieldtype": "Check",
+      "label": "Is Active",
+      "default": "1"
+    },
+    {
+      "fieldname": "assigned_at",
+      "fieldtype": "Datetime",
+      "label": "Assigned At"
+    }
+  ],
+  "index_web_pages_for_search": 1,
+  "issingle": 0,
+  "istable": 0,
+  "modified": "2026-10-03 20:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Tikeria",
+  "name": "Tikeria Scanner Assignment",
+  "naming_rule": "Random",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "Tikeria Admin",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "Tikeria Organizer",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 1
+}

@@ -11,12 +11,14 @@ import (
 
 	"tikeria-be/controllers"
 	"tikeria-be/dto"
-	"tikeria-be/middleware"
 	"tikeria-be/models"
+	"tikeria-be/pkg/apperror"
 	"tikeria-be/pkg/frappe"
 	"tikeria-be/repositories"
+	"tikeria-be/routes"
 	"tikeria-be/services"
 	"tikeria-be/utils"
+	"tikeria-be/worker"
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -34,7 +36,7 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *gorm.DB) {
 		t.Fatalf("failed to open in-memory sqlite: %v", err)
 	}
 
-	if err := db.AutoMigrate(&models.User{}, &models.Event{}, &models.Ticket{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &models.Event{}, &models.Ticket{}, &models.TicketHold{}, &models.Order{}); err != nil {
 		t.Fatalf("failed to migrate models: %v", err)
 	}
 
@@ -57,43 +59,7 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *gorm.DB) {
 		c.Next()
 	})
 
-	mountGroup := func(group *gin.RouterGroup) {
-		auth := group.Group("/auth")
-		{
-			auth.POST("/register", authController.Register)
-			auth.POST("/login", authController.Login)
-			auth.GET("/me", middleware.AuthMiddleware(), authController.GetMe)
-		}
-		organizer := group.Group("/organizer")
-		{
-			organizer.POST("/register", authController.RegisterOrganizer)
-			organizer.POST("/verify-email", authController.VerifyEmail)
-			organizer.GET("/me", middleware.AuthMiddleware("organizer", "partner", "admin"), authController.GetMe)
-			organizer.GET("/package", middleware.AuthMiddleware("organizer", "partner", "admin"), authController.GetOrganizerPackage)
-			organizer.GET("/events", middleware.AuthMiddleware("organizer", "partner", "admin"), eventController.GetOrganizerEvents)
-			organizer.POST("/events", middleware.AuthMiddleware("organizer", "partner", "admin"), eventController.CreateEvent)
-			organizer.PUT("/events/:id", middleware.AuthMiddleware("organizer", "partner", "admin"), eventController.UpdateEvent)
-			organizer.POST("/events/:id/categories", middleware.AuthMiddleware("organizer", "partner", "admin"), eventController.AddTicketCategory)
-			organizer.PUT("/events/:id/categories/:category_id", middleware.AuthMiddleware("organizer", "partner", "admin"), eventController.UpdateTicketCategory)
-			organizer.DELETE("/events/:id/categories/:category_id", middleware.AuthMiddleware("organizer", "partner", "admin"), eventController.DeleteTicketCategory)
-			organizer.POST("/events/:id/submit-approval", middleware.AuthMiddleware("organizer", "partner", "admin"), eventController.SubmitEventApproval)
-		}
-		admin := group.Group("/admin")
-		{
-			admin.POST("/events/:id/approve", middleware.AuthMiddleware("admin"), eventController.ApproveEvent)
-			admin.POST("/events/:id/reject", middleware.AuthMiddleware("admin"), eventController.RejectEvent)
-		}
-		events := group.Group("/events")
-		{
-			events.GET("", eventController.GetAllEvents)
-			events.GET("/:id", eventController.GetEventByID)
-			events.GET("/:id/categories", eventController.GetEventCategories)
-			events.POST("", middleware.AuthMiddleware("organizer", "partner", "admin"), eventController.CreateEvent)
-		}
-	}
-
-	mountGroup(r.Group("/api"))
-	mountGroup(r.Group("/api/v1"))
+	routes.RegisterAPIRoutes(r, authController, eventController)
 
 	return r, db
 }
@@ -325,6 +291,60 @@ func TestAllBackendEndpointsDebug(t *testing.T) {
 	wPubCats, _ := doJSONRequest(r, http.MethodGet, "/api/events/1/categories", "", nil)
 	if wPubCats.Code != http.StatusOK {
 		t.Fatalf("GET /api/events/1/categories failed: %d", wPubCats.Code)
+	}
+}
+
+func TestHoldExpiryWorkerAndAppError(t *testing.T) {
+	_, db := setupTestRouter(t)
+
+	// 1. Test AppError package
+	appErr := apperror.NewPackageLimitQuota()
+	status, code, _ := apperror.FromError(appErr)
+	if status != http.StatusForbidden || code != apperror.CodePackageLimitQuota {
+		t.Fatalf("Expected 403 PACKAGE_LIMIT_QUOTA, got %d %s", status, code)
+	}
+
+	// 2. Test HoldExpiryWorker: create a Ticket with Quota 100, Available 98 (2 held in an overdue TicketHold)
+	ticket := models.Ticket{
+		EventID:   1,
+		Name:      "Reguler",
+		Price:     50000,
+		Quota:     100,
+		Available: 98,
+		IsActive:  true,
+	}
+	if err := db.Create(&ticket).Error; err != nil {
+		t.Fatalf("failed to create ticket: %v", err)
+	}
+
+	hold := models.TicketHold{
+		HoldCode:  "HOLD-2026-00001",
+		EventID:   1,
+		TicketID:  ticket.ID,
+		UserID:    1,
+		Quantity:  2,
+		Status:    "Active",
+		ExpiredAt: time.Now().Add(-5 * time.Minute),
+	}
+	if err := db.Create(&hold).Error; err != nil {
+		t.Fatalf("failed to create hold: %v", err)
+	}
+
+	expiredCount, err := worker.ExpireOverdueHolds(db)
+	if err != nil || expiredCount != 1 {
+		t.Fatalf("Expected 1 expired hold, got count=%d err=%v", expiredCount, err)
+	}
+
+	var updatedHold models.TicketHold
+	_ = db.First(&updatedHold, hold.ID)
+	if updatedHold.Status != "Expired" {
+		t.Fatalf("Expected hold status 'Expired', got %s", updatedHold.Status)
+	}
+
+	var updatedTicket models.Ticket
+	_ = db.First(&updatedTicket, ticket.ID)
+	if updatedTicket.Available != 100 {
+		t.Fatalf("Expected restored ticket available=100, got %d", updatedTicket.Available)
 	}
 }
 

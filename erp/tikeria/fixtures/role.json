@@ -1,0 +1,22 @@
+[
+  {
+    "doctype": "Role",
+    "role_name": "Tikeria Admin",
+    "desk_access": 1
+  },
+  {
+    "doctype": "Role",
+    "role_name": "Tikeria Organizer",
+    "desk_access": 0
+  },
+  {
+    "doctype": "Role",
+    "role_name": "Tikeria Buyer",
+    "desk_access": 0
+  },
+  {
+    "doctype": "Role",
+    "role_name": "Tikeria Scanner",
+    "desk_access": 0
+  }
+]

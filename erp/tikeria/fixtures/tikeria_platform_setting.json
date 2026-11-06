@@ -1,0 +1,7 @@
+[
+  {
+    "doctype": "Tikeria Platform Setting",
+    "default_service_fee": 5000,
+    "fee_for_free_orders": 0
+  }
+]

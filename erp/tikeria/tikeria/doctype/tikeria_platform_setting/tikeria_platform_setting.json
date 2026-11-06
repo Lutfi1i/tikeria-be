@@ -1,0 +1,57 @@
+{
+  "actions": [],
+  "allow_rename": 0,
+  "autoname": "hash",
+  "creation": "2026-09-18 00:00:00.000000",
+  "doctype": "DocType",
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "default_service_fee",
+    "fee_for_free_orders"
+  ],
+  "fields": [
+    {
+      "fieldname": "default_service_fee",
+      "fieldtype": "Currency",
+      "label": "Default Service Fee",
+      "reqd": 1,
+      "default": "5000"
+    },
+    {
+      "fieldname": "fee_for_free_orders",
+      "fieldtype": "Check",
+      "label": "Fee For Free Orders",
+      "default": "0"
+    }
+  ],
+  "index_web_pages_for_search": 1,
+  "issingle": 1,
+  "istable": 0,
+  "modified": "2026-10-03 20:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Tikeria",
+  "name": "Tikeria Platform Setting",
+  "naming_rule": "Random",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0
+    },
+    {
+      "role": "Tikeria Admin",
+      "read": 1,
+      "write": 1,
+      "create": 0,
+      "delete": 0
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 1
+}

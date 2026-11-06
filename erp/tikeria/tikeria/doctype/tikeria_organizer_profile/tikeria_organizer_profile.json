@@ -1,0 +1,161 @@
+{
+  "actions": [],
+  "allow_rename": 0,
+  "autoname": "format:ORG-{organizer_name}-{#####}",
+  "creation": "2026-09-18 00:00:00.000000",
+  "doctype": "DocType",
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "user",
+    "organizer_name",
+    "email",
+    "phone",
+    "organization_name",
+    "address",
+    "status",
+    "organizer_type",
+    "package",
+    "package_since",
+    "institution",
+    "city",
+    "whatsapp",
+    "logo",
+    "email_verified",
+    "created_at"
+  ],
+  "fields": [
+    {
+      "fieldname": "user",
+      "fieldtype": "Link",
+      "label": "User",
+      "options": "User",
+      "reqd": 1,
+      "unique": 1
+    },
+    {
+      "fieldname": "organizer_name",
+      "fieldtype": "Data",
+      "label": "Organizer Name",
+      "reqd": 1
+    },
+    {
+      "fieldname": "email",
+      "fieldtype": "Data",
+      "label": "Email",
+      "reqd": 1
+    },
+    {
+      "fieldname": "phone",
+      "fieldtype": "Data",
+      "label": "Phone"
+    },
+    {
+      "fieldname": "organization_name",
+      "fieldtype": "Data",
+      "label": "Company/Community Name"
+    },
+    {
+      "fieldname": "address",
+      "fieldtype": "Small Text",
+      "label": "Address"
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "label": "Status",
+      "options": "Active\nInactive",
+      "default": "Active",
+      "reqd": 1
+    },
+    {
+      "fieldname": "organizer_type",
+      "fieldtype": "Select",
+      "label": "Organizer Type",
+      "options": "school_campus\npublic_later",
+      "default": "school_campus",
+      "reqd": 1
+    },
+    {
+      "fieldname": "package",
+      "fieldtype": "Link",
+      "label": "Package",
+      "options": "Tikeria Organizer Package",
+      "reqd": 1,
+      "default": "basic"
+    },
+    {
+      "fieldname": "package_since",
+      "fieldtype": "Date",
+      "label": "Package Since"
+    },
+    {
+      "fieldname": "institution",
+      "fieldtype": "Data",
+      "label": "Institution"
+    },
+    {
+      "fieldname": "city",
+      "fieldtype": "Data",
+      "label": "City"
+    },
+    {
+      "fieldname": "whatsapp",
+      "fieldtype": "Data",
+      "label": "WhatsApp",
+      "reqd": 1
+    },
+    {
+      "fieldname": "logo",
+      "fieldtype": "Attach Image",
+      "label": "Logo"
+    },
+    {
+      "fieldname": "email_verified",
+      "fieldtype": "Check",
+      "label": "Email Verified",
+      "default": "0"
+    },
+    {
+      "fieldname": "created_at",
+      "fieldtype": "Datetime",
+      "label": "Created At"
+    }
+  ],
+  "index_web_pages_for_search": 1,
+  "issingle": 0,
+  "istable": 0,
+  "modified": "2026-10-03 20:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Tikeria",
+  "name": "Tikeria Organizer Profile",
+  "naming_rule": "Random",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "Tikeria Admin",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "Tikeria Organizer",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 1
+}

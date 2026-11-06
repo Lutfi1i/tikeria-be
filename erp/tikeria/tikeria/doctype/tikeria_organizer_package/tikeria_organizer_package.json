@@ -1,0 +1,138 @@
+{
+  "actions": [],
+  "allow_rename": 0,
+  "autoname": "field:package_code",
+  "creation": "2026-09-18 00:00:00.000000",
+  "doctype": "DocType",
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "package_code",
+    "package_name",
+    "price",
+    "max_active_event",
+    "max_ticket_category",
+    "max_quota_per_event",
+    "max_scanner_accounts",
+    "is_multi_category",
+    "report_per_category",
+    "export_csv",
+    "custom_branding",
+    "is_active"
+  ],
+  "fields": [
+    {
+      "fieldname": "package_code",
+      "fieldtype": "Data",
+      "label": "Package Code",
+      "reqd": 1,
+      "unique": 1
+    },
+    {
+      "fieldname": "package_name",
+      "fieldtype": "Data",
+      "label": "Package Name",
+      "reqd": 1
+    },
+    {
+      "fieldname": "price",
+      "fieldtype": "Currency",
+      "label": "Price",
+      "default": "0"
+    },
+    {
+      "fieldname": "max_active_event",
+      "fieldtype": "Int",
+      "label": "Max Active Event",
+      "reqd": 1,
+      "default": "1"
+    },
+    {
+      "fieldname": "max_ticket_category",
+      "fieldtype": "Int",
+      "label": "Max Ticket Category",
+      "reqd": 1,
+      "default": "1"
+    },
+    {
+      "fieldname": "max_quota_per_event",
+      "fieldtype": "Int",
+      "label": "Max Quota Per Event",
+      "reqd": 1,
+      "default": "1000"
+    },
+    {
+      "fieldname": "max_scanner_accounts",
+      "fieldtype": "Int",
+      "label": "Max Scanner Accounts",
+      "reqd": 1,
+      "default": "1"
+    },
+    {
+      "fieldname": "is_multi_category",
+      "fieldtype": "Check",
+      "label": "Is Multi Category",
+      "default": "0"
+    },
+    {
+      "fieldname": "report_per_category",
+      "fieldtype": "Check",
+      "label": "Report Per Category",
+      "default": "0"
+    },
+    {
+      "fieldname": "export_csv",
+      "fieldtype": "Check",
+      "label": "Export CSV",
+      "default": "0"
+    },
+    {
+      "fieldname": "custom_branding",
+      "fieldtype": "Check",
+      "label": "Custom Branding",
+      "default": "0"
+    },
+    {
+      "fieldname": "is_active",
+      "fieldtype": "Check",
+      "label": "Is Active",
+      "default": "1"
+    }
+  ],
+  "index_web_pages_for_search": 1,
+  "issingle": 0,
+  "istable": 0,
+  "modified": "2026-10-03 20:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Tikeria",
+  "name": "Tikeria Organizer Package",
+  "naming_rule": "Random",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "Tikeria Admin",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "Tikeria Organizer",
+      "read": 1,
+      "write": 0,
+      "create": 0,
+      "delete": 0
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 1
+}

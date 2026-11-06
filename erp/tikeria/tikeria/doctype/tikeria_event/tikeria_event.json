@@ -1,0 +1,212 @@
+{
+  "actions": [],
+  "allow_rename": 0,
+  "autoname": "naming_series:",
+  "creation": "2026-09-18 00:00:00.000000",
+  "doctype": "DocType",
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "field_order": [
+    "naming_series",
+    "title",
+    "slug",
+    "organizer",
+    "event_type",
+    "event_template",
+    "pic_name",
+    "pic_whatsapp",
+    "event_image",
+    "city",
+    "venue_name",
+    "venue_address",
+    "event_date",
+    "event_time",
+    "description",
+    "terms_and_conditions",
+    "status",
+    "reject_reason",
+    "reviewed_by",
+    "reviewed_at",
+    "published_at",
+    "created_by_organizer"
+  ],
+  "fields": [
+    {
+      "fieldname": "naming_series",
+      "fieldtype": "Select",
+      "label": "Naming Series",
+      "options": "EVT-.YYYY.-.#####",
+      "default": "EVT-.YYYY.-.#####",
+      "reqd": 1
+    },
+    {
+      "fieldname": "title",
+      "fieldtype": "Data",
+      "label": "Title",
+      "reqd": 1
+    },
+    {
+      "fieldname": "slug",
+      "fieldtype": "Data",
+      "label": "Slug",
+      "reqd": 1,
+      "unique": 1
+    },
+    {
+      "fieldname": "organizer",
+      "fieldtype": "Link",
+      "label": "Organizer",
+      "options": "Tikeria Organizer Profile",
+      "reqd": 1
+    },
+    {
+      "fieldname": "event_type",
+      "fieldtype": "Link",
+      "label": "Event Type",
+      "options": "Tikeria Event Type",
+      "reqd": 1
+    },
+    {
+      "fieldname": "event_template",
+      "fieldtype": "Select",
+      "label": "Event Template",
+      "options": "pensi\nlainnya",
+      "default": "pensi",
+      "reqd": 1
+    },
+    {
+      "fieldname": "pic_name",
+      "fieldtype": "Data",
+      "label": "PIC Name",
+      "reqd": 1
+    },
+    {
+      "fieldname": "pic_whatsapp",
+      "fieldtype": "Data",
+      "label": "PIC WhatsApp",
+      "reqd": 1
+    },
+    {
+      "fieldname": "event_image",
+      "fieldtype": "Attach Image",
+      "label": "Event Image",
+      "reqd": 1
+    },
+    {
+      "fieldname": "city",
+      "fieldtype": "Data",
+      "label": "City",
+      "reqd": 1
+    },
+    {
+      "fieldname": "venue_name",
+      "fieldtype": "Data",
+      "label": "Venue Name",
+      "reqd": 1
+    },
+    {
+      "fieldname": "venue_address",
+      "fieldtype": "Small Text",
+      "label": "Venue Address",
+      "reqd": 1
+    },
+    {
+      "fieldname": "event_date",
+      "fieldtype": "Date",
+      "label": "Event Date",
+      "reqd": 1
+    },
+    {
+      "fieldname": "event_time",
+      "fieldtype": "Time",
+      "label": "Event Time",
+      "reqd": 1
+    },
+    {
+      "fieldname": "description",
+      "fieldtype": "Text Editor",
+      "label": "Description",
+      "reqd": 1
+    },
+    {
+      "fieldname": "terms_and_conditions",
+      "fieldtype": "Text Editor",
+      "label": "Terms and Conditions"
+    },
+    {
+      "fieldname": "status",
+      "fieldtype": "Select",
+      "label": "Status",
+      "options": "Draft\nWaiting Approval\nPublished\nReject",
+      "default": "Draft",
+      "reqd": 1
+    },
+    {
+      "fieldname": "reject_reason",
+      "fieldtype": "Small Text",
+      "label": "Reject Reason"
+    },
+    {
+      "fieldname": "reviewed_by",
+      "fieldtype": "Link",
+      "label": "Reviewed By",
+      "options": "User"
+    },
+    {
+      "fieldname": "reviewed_at",
+      "fieldtype": "Datetime",
+      "label": "Reviewed At"
+    },
+    {
+      "fieldname": "published_at",
+      "fieldtype": "Datetime",
+      "label": "Published At"
+    },
+    {
+      "fieldname": "created_by_organizer",
+      "fieldtype": "Link",
+      "label": "Created By Organizer",
+      "options": "User"
+    }
+  ],
+  "index_web_pages_for_search": 1,
+  "issingle": 0,
+  "istable": 0,
+  "modified": "2026-10-03 20:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Tikeria",
+  "name": "Tikeria Event",
+  "naming_rule": "By \"Naming Series\" field",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "Tikeria Admin",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    },
+    {
+      "role": "Tikeria Organizer",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 0
+    },
+    {
+      "role": "All",
+      "read": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": [],
+  "track_changes": 1
+}

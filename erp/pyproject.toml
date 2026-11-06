@@ -1,0 +1,19 @@
+[build-system]
+requires = ["flit_core >=3.4,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "tikeria"
+authors = [
+    {name = "Tikeria Team", email = "dev@tikeria.id"}
+]
+description = "ERP and Admin module for Tikeria multiplatform ticketing"
+requires-python = ">=3.10"
+readme = "README.md"
+dynamic = ["version"]
+dependencies = [
+    # "frappe"
+]
+
+[tool.flit.module]
+name = "tikeria"
