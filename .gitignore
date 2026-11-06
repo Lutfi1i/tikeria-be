@@ -36,3 +36,8 @@ build-errors.log
 Thumbs.db
 
 # git ignored file
+
+# Python / Frappe
+__pycache__/
+*.pyc
+
