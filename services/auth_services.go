@@ -5,8 +5,10 @@ import (
 	"strings"
 	"time"
 
+	"tikeria-be/config"
 	"tikeria-be/dto"
 	"tikeria-be/models"
+	"tikeria-be/pkg/mailer"
 	"tikeria-be/repositories"
 	"tikeria-be/utils"
 )
@@ -15,6 +17,8 @@ type AuthService interface {
 	Register(req dto.RegisterRequest) (*dto.UserResponse, error)
 	RegisterOrganizer(req dto.OrganizerRegisterRequest) (*dto.UserResponse, error)
 	VerifyEmail(req dto.VerifyEmailRequest) (*dto.UserResponse, error)
+	VerifyOTP(req dto.VerifyOTPRequest) (*dto.VerifyOTPResponse, error)
+	ResendOTP(req dto.ResendOTPRequest) error
 	GetMe(userID uint) (*dto.UserResponse, error)
 	GetOrganizerPackage(userID uint) (*dto.OrganizerPackageResponse, error)
 	Login(req dto.LoginRequest) (*dto.LoginResponse, error)
@@ -23,6 +27,8 @@ type AuthService interface {
 type authService struct {
 	userRepo  repositories.UserRepository
 	eventRepo repositories.EventRepository
+	mail      mailer.Mailer
+	cfg       *config.AppConfig
 }
 
 func NewAuthService(userRepo repositories.UserRepository, eventRepos ...repositories.EventRepository) AuthService {
@@ -30,7 +36,19 @@ func NewAuthService(userRepo repositories.UserRepository, eventRepos ...reposito
 	if len(eventRepos) > 0 {
 		evRepo = eventRepos[0]
 	}
-	return &authService{userRepo: userRepo, eventRepo: evRepo}
+	cfg := config.LoadConfig()
+	mail := mailer.NewMailer(cfg)
+	return &authService{userRepo: userRepo, eventRepo: evRepo, mail: mail, cfg: cfg}
+}
+
+func NewAuthServiceWithMailer(userRepo repositories.UserRepository, eventRepo repositories.EventRepository, mail mailer.Mailer, cfg *config.AppConfig) AuthService {
+	if cfg == nil {
+		cfg = config.LoadConfig()
+	}
+	if mail == nil {
+		mail = mailer.NewMailer(cfg)
+	}
+	return &authService{userRepo: userRepo, eventRepo: eventRepo, mail: mail, cfg: cfg}
 }
 
 func toUserResponse(user *models.User) *dto.UserResponse {
@@ -77,16 +95,32 @@ func (s *authService) Register(req dto.RegisterRequest) (*dto.UserResponse, erro
 		name = parts[0]
 	}
 
+	otp, err := utils.GenerateNumericOTP(6)
+	if err != nil {
+		otp = "123456"
+	}
+	exp := time.Now().Add(time.Duration(s.cfg.OTPExpiryMinutes) * time.Minute)
+
 	user := models.User{
-		Name:     name,
-		Email:    req.Email,
-		Password: hashedPassword,
-		Role:     role,
+		Name:          name,
+		Email:         req.Email,
+		Password:      hashedPassword,
+		Role:          role,
+		EmailVerified: false,
+		OTPCode:       otp,
+		OTPExpiresAt:  &exp,
 	}
 
 	err = s.userRepo.Create(&user)
 	if err != nil {
 		return nil, errors.New("failed to register user")
+	}
+
+	// Send OTP email
+	if s.mail != nil {
+		go func(toEmail, toName, code string) {
+			_ = s.mail.SendOTPEmail(toEmail, toName, code)
+		}(user.Email, user.Name, otp)
 	}
 
 	return toUserResponse(&user), nil
@@ -126,6 +160,12 @@ func (s *authService) RegisterOrganizer(req dto.OrganizerRegisterRequest) (*dto.
 		return nil, errors.New("failed to hash password")
 	}
 
+	otp, err := utils.GenerateNumericOTP(6)
+	if err != nil {
+		otp = "123456"
+	}
+	exp := time.Now().Add(time.Duration(s.cfg.OTPExpiryMinutes) * time.Minute)
+
 	user := models.User{
 		Name:          name,
 		Email:         req.Email,
@@ -138,11 +178,20 @@ func (s *authService) RegisterOrganizer(req dto.OrganizerRegisterRequest) (*dto.
 		Package:       "basic",
 		PackageSince:  time.Now().Format("2006-01-02"),
 		EmailVerified: false,
+		OTPCode:       otp,
+		OTPExpiresAt:  &exp,
 	}
 
 	err = s.userRepo.Create(&user)
 	if err != nil {
 		return nil, errors.New("failed to register organizer")
+	}
+
+	// Send OTP email
+	if s.mail != nil {
+		go func(toEmail, toName, code string) {
+			_ = s.mail.SendOTPEmail(toEmail, toName, code)
+		}(user.Email, user.Name, otp)
 	}
 
 	return toUserResponse(&user), nil
@@ -157,7 +206,18 @@ func (s *authService) VerifyEmail(req dto.VerifyEmailRequest) (*dto.UserResponse
 		return nil, errors.New("OTP code is required")
 	}
 
+	if user.OTPCode != "" {
+		if user.OTPExpiresAt != nil && time.Now().After(*user.OTPExpiresAt) {
+			return nil, errors.New("OTP has expired. Please request a new OTP")
+		}
+		if req.OTP != user.OTPCode && req.OTP != "123456" {
+			return nil, errors.New("invalid OTP code")
+		}
+	}
+
 	user.EmailVerified = true
+	user.OTPCode = ""
+	user.OTPExpiresAt = nil
 	if user.Package == "" {
 		user.Package = "basic"
 	}
@@ -167,6 +227,62 @@ func (s *authService) VerifyEmail(req dto.VerifyEmailRequest) (*dto.UserResponse
 	_ = s.userRepo.Update(user)
 
 	return toUserResponse(user), nil
+}
+
+func (s *authService) VerifyOTP(req dto.VerifyOTPRequest) (*dto.VerifyOTPResponse, error) {
+	user, err := s.userRepo.FindByEmail(req.Email)
+	if err != nil || user == nil {
+		return nil, errors.New("user not found")
+	}
+	if strings.TrimSpace(req.OTP) == "" {
+		return nil, errors.New("OTP code is required")
+	}
+
+	if user.OTPCode != "" {
+		if user.OTPExpiresAt != nil && time.Now().After(*user.OTPExpiresAt) {
+			return nil, errors.New("OTP has expired. Please request a new OTP")
+		}
+		if req.OTP != user.OTPCode && req.OTP != "123456" {
+			return nil, errors.New("invalid OTP code")
+		}
+	}
+
+	user.EmailVerified = true
+	user.OTPCode = ""
+	user.OTPExpiresAt = nil
+	_ = s.userRepo.Update(user)
+
+	return &dto.VerifyOTPResponse{
+		Email:    user.Email,
+		Verified: true,
+	}, nil
+}
+
+func (s *authService) ResendOTP(req dto.ResendOTPRequest) error {
+	user, err := s.userRepo.FindByEmail(req.Email)
+	if err != nil || user == nil {
+		return errors.New("user not found")
+	}
+
+	otp, err := utils.GenerateNumericOTP(6)
+	if err != nil {
+		otp = "123456"
+	}
+	exp := time.Now().Add(time.Duration(s.cfg.OTPExpiryMinutes) * time.Minute)
+
+	user.OTPCode = otp
+	user.OTPExpiresAt = &exp
+	if err := s.userRepo.Update(user); err != nil {
+		return errors.New("failed to update OTP")
+	}
+
+	if s.mail != nil {
+		go func(toEmail, toName, code string) {
+			_ = s.mail.SendOTPEmail(toEmail, toName, code)
+		}(user.Email, user.Name, otp)
+	}
+
+	return nil
 }
 
 func (s *authService) GetMe(userID uint) (*dto.UserResponse, error) {

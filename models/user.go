@@ -19,6 +19,8 @@ type User struct {
 	Package       string         `gorm:"type:varchar(20);default:'basic'" json:"package,omitempty"`
 	PackageSince  string         `gorm:"type:varchar(20)" json:"package_since,omitempty"`
 	EmailVerified bool           `gorm:"default:false" json:"email_verified"`
+	OTPCode       string         `gorm:"type:varchar(10)" json:"-"`
+	OTPExpiresAt  *time.Time     `json:"-"`
 	CreatedAt     time.Time      `json:"created_at"`
 	UpdatedAt     time.Time      `json:"updated_at"`
 	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`

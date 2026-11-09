@@ -234,3 +234,76 @@ func (c *AuthController) GetOrganizerPackage(ctx *gin.Context) {
 		Data:    pkg,
 	})
 }
+
+
+// VerifyOTP godoc
+// @Summary      Verify OTP
+// @Description  Verify buyer email with 6-digit OTP code
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        request body dto.VerifyOTPRequest true "OTP verification payload"
+// @Success      200  {object}  dto.WebResponse{data=dto.VerifyOTPResponse}
+// @Failure      400  {object}  dto.WebResponse
+// @Router       /api/auth/verify-otp [post]
+func (c *AuthController) VerifyOTP(ctx *gin.Context) {
+	var req dto.VerifyOTPRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.WebResponse{
+			Success: false,
+			Message: "Invalid verification request",
+			Errors:  err.Error(),
+		})
+		return
+	}
+
+	resp, err := c.authService.VerifyOTP(req)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.WebResponse{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.WebResponse{
+		Success: true,
+		Message: "Email verified successfully",
+		Data:    resp,
+	})
+}
+
+// ResendOTP godoc
+// @Summary      Resend OTP
+// @Description  Generate and send a fresh OTP to the user's email
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        request body dto.ResendOTPRequest true "Resend OTP payload"
+// @Success      200  {object}  dto.WebResponse
+// @Failure      400  {object}  dto.WebResponse
+// @Router       /api/auth/resend-otp [post]
+func (c *AuthController) ResendOTP(ctx *gin.Context) {
+	var req dto.ResendOTPRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.WebResponse{
+			Success: false,
+			Message: "Invalid resend request",
+			Errors:  err.Error(),
+		})
+		return
+	}
+
+	if err := c.authService.ResendOTP(req); err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.WebResponse{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.WebResponse{
+		Success: true,
+		Message: "OTP resent successfully",
+	})
+}

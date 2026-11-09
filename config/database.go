@@ -44,7 +44,10 @@ func InitDatabase() *gorm.DB {
 		&models.Event{},
 		&models.Ticket{},
 		&models.TicketHold{},
+		&models.ParticipantDetail{},
 		&models.Order{},
+		&models.OrderItem{},
+		&models.Payment{},
 	)
 
 	if err != nil {

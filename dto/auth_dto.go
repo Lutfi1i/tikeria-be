@@ -105,3 +105,23 @@ type UserResponse struct {
 	EmailVerified bool   `json:"email_verified"`
 	CreatedAt     string `json:"created_at"`
 }
+
+type VerifyOTPRequest struct {
+	Email string `json:"email" binding:"required,email"`
+	OTP   string `json:"otp" binding:"required"`
+}
+
+type VerifyOTPResponse struct {
+	Email    string `json:"email"`
+	Verified bool   `json:"verified"`
+}
+
+type ResendOTPRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+type RegisterAuthResponse struct {
+	UserID      string `json:"user_id"`
+	Email       string `json:"email"`
+	OTPRequired bool   `json:"otp_required"`
+}

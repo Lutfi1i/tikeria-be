@@ -47,9 +47,3 @@ type TicketInput struct {
 type RejectEventRequest struct {
 	RejectReason string `json:"reject_reason" binding:"required"`
 }
-
-type CreateOrderRequest struct {
-	EventID  uint `json:"event_id" binding:"required"`
-	TicketID uint `json:"ticket_id" binding:"required"`
-	Quantity int  `json:"quantity" binding:"required,gt=0"`
-}

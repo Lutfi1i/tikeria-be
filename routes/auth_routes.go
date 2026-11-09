@@ -11,6 +11,8 @@ func RegisterAuthRoutes(group *gin.RouterGroup, authController *controllers.Auth
 	auth := group.Group("/auth")
 	{
 		auth.POST("/register", authController.Register)
+		auth.POST("/verify-otp", authController.VerifyOTP)
+		auth.POST("/resend-otp", authController.ResendOTP)
 		auth.POST("/login", authController.Login)
 		auth.GET("/me", middleware.AuthMiddleware(), authController.GetMe)
 	}

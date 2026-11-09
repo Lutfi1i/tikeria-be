@@ -16,6 +16,12 @@ type AppConfig struct {
 	FrappeAPIKey      string
 	FrappeAPISecret   string
 	DefaultServiceFee float64
+	SMTPHost          string
+	SMTPPort          int
+	SMTPUser          string
+	SMTPPassword      string
+	SMTPFrom          string
+	OTPExpiryMinutes  int
 }
 
 func LoadConfig() *AppConfig {
@@ -42,6 +48,25 @@ func LoadConfig() *AppConfig {
 		}
 	}
 
+	smtpPort := 587
+	if rawPort := strings.TrimSpace(os.Getenv("SMTP_PORT")); rawPort != "" {
+		if p, err := strconv.Atoi(rawPort); err == nil && p > 0 {
+			smtpPort = p
+		}
+	}
+
+	otpExpiry := 10
+	if rawExpiry := strings.TrimSpace(os.Getenv("OTP_EXPIRY_MINUTES")); rawExpiry != "" {
+		if exp, err := strconv.Atoi(rawExpiry); err == nil && exp > 0 {
+			otpExpiry = exp
+		}
+	}
+
+	smtpFrom := strings.TrimSpace(os.Getenv("SMTP_FROM"))
+	if smtpFrom == "" {
+		smtpFrom = "no-reply@tikeria.id"
+	}
+
 	return &AppConfig{
 		Port:              port,
 		DBDriver:          strings.TrimSpace(os.Getenv("DB_DRIVER")),
@@ -52,5 +77,11 @@ func LoadConfig() *AppConfig {
 		FrappeAPIKey:      strings.TrimSpace(os.Getenv("FRAPPE_API_KEY")),
 		FrappeAPISecret:   strings.TrimSpace(os.Getenv("FRAPPE_API_SECRET")),
 		DefaultServiceFee: serviceFee,
+		SMTPHost:          strings.TrimSpace(os.Getenv("SMTP_HOST")),
+		SMTPPort:          smtpPort,
+		SMTPUser:          strings.TrimSpace(os.Getenv("SMTP_USER")),
+		SMTPPassword:      strings.TrimSpace(os.Getenv("SMTP_PASSWORD")),
+		SMTPFrom:          smtpFrom,
+		OTPExpiryMinutes:  otpExpiry,
 	}
 }

@@ -51,12 +51,15 @@ func main() {
 
 	userRepo := repositories.NewUserRepository(db)
 	eventRepo := repositories.NewEventRepository(db)
+	checkoutRepo := repositories.NewCheckoutRepository(db)
 
 	authService := services.NewAuthService(userRepo, eventRepo)
 	eventService := services.NewEventService(eventRepo, userRepo)
+	checkoutService := services.NewCheckoutService(checkoutRepo, eventRepo, userRepo, cfg)
 
 	authController := controllers.NewAuthController(authService)
 	eventController := controllers.NewEventController(eventService)
+	checkoutController := controllers.NewCheckoutController(checkoutService)
 
 	r := gin.Default()
 
@@ -86,7 +89,7 @@ func main() {
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Register modular domain routes under both /api and /api/v1
-	routes.RegisterAPIRoutes(r, authController, eventController)
+	routes.RegisterAPIRoutes(r, authController, eventController, checkoutController)
 
 	fmt.Printf("TikeriaGO is running at : http://localhost:%s\n", cfg.Port)
 	fmt.Printf("DOCS endpoint for applying : http://localhost:%s/swagger/index.html\n\n", cfg.Port)
