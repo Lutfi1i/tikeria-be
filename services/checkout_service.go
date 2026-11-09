@@ -11,6 +11,7 @@ import (
 	"tikeria-be/config"
 	"tikeria-be/dto"
 	"tikeria-be/models"
+	"tikeria-be/pkg/frappe"
 	"tikeria-be/repositories"
 	"tikeria-be/utils"
 )
@@ -150,6 +151,15 @@ func (s *checkoutService) CreateHold(userID uint, req dto.CreateHoldRequest) (*d
 	if err := s.checkoutRepo.CreateHold(&hold); err != nil {
 		return nil, fmt.Errorf("failed to create ticket hold: %w", err)
 	}
+
+	frappe.SyncDocAsync("Tikeria Ticket Hold", hold.HoldCode, map[string]interface{}{
+		"hold_code":          hold.HoldCode,
+		"event_id":           fmt.Sprintf("EVT-%d-%05d", event.CreatedAt.Year(), event.ID),
+		"ticket_category_id": fmt.Sprintf("CAT-%d-%05d", ticket.CreatedAt.Year(), ticket.ID),
+		"quantity":           hold.Quantity,
+		"status":             hold.Status,
+		"expired_at":         dto.FormatTimeRFC3339(hold.ExpiredAt),
+	})
 
 	return &dto.CreateHoldResponse{
 		HoldID:           hold.HoldCode,
@@ -381,6 +391,23 @@ func (s *checkoutService) CreateOrder(userID uint, req dto.CreateOrderRequest) (
 		return nil, fmt.Errorf("failed to create order: %w", err)
 	}
 
+	frappe.SyncDocAsync("Tikeria Order", order.OrderCode, map[string]interface{}{
+		"order_code":     order.OrderCode,
+		"invoice_number": order.InvoiceNumber,
+		"hold_id":        hold.HoldCode,
+		"subtotal":       order.Subtotal,
+		"service_fee":    order.ServiceFee,
+		"total_amount":   order.TotalAmount,
+		"status":         order.Status,
+	})
+	frappe.SyncDocAsync("Tikeria Payment", payment.PaymentCode, map[string]interface{}{
+		"payment_code":   payment.PaymentCode,
+		"order_code":     order.OrderCode,
+		"status":         payment.Status,
+		"amount":         payment.Amount,
+		"payment_method": payment.PaymentMethod,
+	})
+
 	return &dto.CreateOrderResponse{
 		OrderID:       order.OrderCode,
 		InvoiceNumber: order.InvoiceNumber,
@@ -439,7 +466,25 @@ func (s *checkoutService) SimulatePaymentSuccess(identifier string) (*dto.OrderS
 		order.Payment.Status = "Success"
 		order.Payment.PaidAt = &now
 		_ = s.checkoutRepo.UpdatePayment(order.Payment)
+		frappe.SyncDocAsync("Tikeria Payment", order.Payment.PaymentCode, map[string]interface{}{
+			"payment_code":   order.Payment.PaymentCode,
+			"order_code":     order.OrderCode,
+			"status":         "Success",
+			"amount":         order.Payment.Amount,
+			"payment_method": order.Payment.PaymentMethod,
+			"paid_at":        dto.FormatTimeRFC3339(now),
+		})
 	}
+
+	frappe.SyncDocAsync("Tikeria Order", order.OrderCode, map[string]interface{}{
+		"order_code":     order.OrderCode,
+		"invoice_number": order.InvoiceNumber,
+		"subtotal":       order.Subtotal,
+		"service_fee":    order.ServiceFee,
+		"total_amount":   order.TotalAmount,
+		"status":         "Paid",
+		"paid_at":        dto.FormatTimeRFC3339(now),
+	})
 
 	// Update Ticket sold count
 	ticket, err := s.eventRepo.FindTicketByID(order.TicketID)

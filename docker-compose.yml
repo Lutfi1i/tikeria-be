@@ -1,16 +1,38 @@
-version: '3.8'
-
 services:
-  app:
+  tikeria-erp:
+    build:
+      context: ./erp
+      dockerfile: Dockerfile
+    container_name: tikeria-erp
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - ERP_DB_PATH=/data/frappe_erp.db
+      - FRAPPE_API_KEY=tikeria_admin_key
+      - FRAPPE_API_SECRET=tikeria_admin_secret
+    volumes:
+      - tikeria_erp_data:/data
+    restart: unless-stopped
+
+  tikeria-be:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: tikeria-be
     ports:
       - "8080:8080"
+    env_file:
+      - .env
     environment:
       - PORT=8080
-      - DB_DRIVER=sqlite
-      - DB_SOURCE=tikeria.db
-      - JWT_SECRET=supersecretkeytikeria123
-    restart: always
+      - FRAPPE_SYNC_ENABLED=true
+      - FRAPPE_BASE_URL=http://tikeria-erp:8000
+      - FRAPPE_API_KEY=tikeria_admin_key
+      - FRAPPE_API_SECRET=tikeria_admin_secret
+    depends_on:
+      - tikeria-erp
+    restart: unless-stopped
+
+volumes:
+  tikeria_erp_data:

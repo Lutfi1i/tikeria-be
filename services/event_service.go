@@ -7,6 +7,7 @@ import (
 
 	"tikeria-be/dto"
 	"tikeria-be/models"
+	"tikeria-be/pkg/frappe"
 	"tikeria-be/repositories"
 )
 
@@ -35,6 +36,25 @@ func NewEventService(eventRepo repositories.EventRepository, userRepos ...reposi
 		uRepo = userRepos[0]
 	}
 	return &eventService{eventRepo: eventRepo, userRepo: uRepo}
+}
+
+func syncEventToFrappe(event *models.Event) {
+	if event == nil {
+		return
+	}
+	docName := frappe.FormatEventDocName(event.CreatedAt.Year(), event.ID)
+	frappe.SyncDocAsync("Tikeria Event", docName, map[string]interface{}{
+		"title":          event.Title,
+		"description":    event.Description,
+		"location":       event.Location,
+		"city":           event.City,
+		"venue_name":     event.VenueName,
+		"event_template": event.EventTemplate,
+		"event_date":     event.EventDate.Format("2006-01-02"),
+		"status":         event.Status,
+		"reject_reason":  event.RejectReason,
+		"reviewed_by":    event.ReviewedBy,
+	})
 }
 
 func (s *eventService) isOrganizerPro(organizerID uint, explicitIsPro ...bool) bool {
@@ -139,6 +159,7 @@ func (s *eventService) CreateEvent(organizerID uint, req dto.CreateEventRequest,
 		return nil, errors.New("failed to create new event")
 	}
 
+	syncEventToFrappe(&event)
 	return &event, nil
 }
 
@@ -190,6 +211,7 @@ func (s *eventService) UpdateEvent(organizerID uint, eventID uint, req dto.Updat
 	if err := s.eventRepo.Update(event); err != nil {
 		return nil, errors.New("failed to update event")
 	}
+	syncEventToFrappe(event)
 	return event, nil
 }
 
@@ -363,6 +385,7 @@ func (s *eventService) SubmitEventApproval(organizerID uint, eventID uint) (*mod
 	if err := s.eventRepo.Update(event); err != nil {
 		return nil, errors.New("failed to submit event for approval")
 	}
+	syncEventToFrappe(event)
 	return event, nil
 }
 
@@ -383,6 +406,7 @@ func (s *eventService) ApproveEvent(adminIdentifier string, eventID uint) (*mode
 	if err := s.eventRepo.Update(event); err != nil {
 		return nil, errors.New("failed to approve event")
 	}
+	syncEventToFrappe(event)
 	return event, nil
 }
 
@@ -406,5 +430,6 @@ func (s *eventService) RejectEvent(adminIdentifier string, eventID uint, rejectR
 	if err := s.eventRepo.Update(event); err != nil {
 		return nil, errors.New("failed to reject event")
 	}
+	syncEventToFrappe(event)
 	return event, nil
 }
