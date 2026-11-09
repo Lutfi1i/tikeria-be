@@ -23,8 +23,12 @@ func InitDatabase() *gorm.DB {
 	var err error
 
 	if dbDriver == "postgres" {
-		db, err = gorm.Open(postgres.Open(dbSource), &gorm.Config{
-			Logger: logger.Default.LogMode(logger.Info),
+		db, err = gorm.Open(postgres.New(postgres.Config{
+			DSN:                  dbSource,
+			PreferSimpleProtocol: true, // disables implicit prepared statement usage (fixes PgBouncer/Supabase SQLSTATE 42P05)
+		}), &gorm.Config{
+			PrepareStmt: false,
+			Logger:      logger.Default.LogMode(logger.Info),
 		})
 	} else {
 		if dbSource == "" {
