@@ -16,6 +16,7 @@ import (
 	"tikeria-be/dto"
 	"tikeria-be/models"
 	"tikeria-be/pkg/mailer"
+	"tikeria-be/pkg/payment"
 	"tikeria-be/repositories"
 	"tikeria-be/routes"
 	"tikeria-be/services"
@@ -462,4 +463,49 @@ func TestLiveSendOTPToNabil(t *testing.T) {
 		t.Fatalf("SMTP send failed: %v", err)
 	}
 	t.Logf("Successfully sent HTML OTP email (%s) to %s via %s:%d", otp, targetEmail, cfg.SMTPHost, cfg.SMTPPort)
+}
+
+func TestLiveMidtransSnapSandbox(t *testing.T) {
+	_ = godotenv.Load("../.env")
+	cfg := config.LoadConfig()
+
+	if cfg.MidtransServerKey == "" {
+		t.Skip("skipping test: MIDTRANS_SERVER_KEY is empty")
+	}
+
+	client := payment.NewMidtransClient(cfg)
+	orderCode := fmt.Sprintf("ORDER-TEST-%d", time.Now().Unix())
+	order := &models.Order{
+		OrderCode:   orderCode,
+		TotalAmount: 150000,
+		ServiceFee:  5000,
+		Items: []models.OrderItem{
+			{
+				TicketID:     1,
+				CategoryName: "VIP Ticket Test",
+				Price:        145000,
+				Quantity:     1,
+			},
+		},
+	}
+	participant := &models.ParticipantDetail{
+		FullName: "Nabil Naufal",
+		Email:    "nabilnaufal316@gmail.com",
+		Phone:    "081234567890",
+	}
+
+	snapResp, err := client.CreateSnapTransaction(order, participant)
+	if err != nil {
+		t.Fatalf("Midtrans CreateSnapTransaction failed: %v", err)
+	}
+
+	t.Logf("Midtrans Snap Token: %s", snapResp.Token)
+	t.Logf("Midtrans Redirect URL: %s", snapResp.RedirectURL)
+
+	if snapResp.Token == "" {
+		t.Errorf("expected non-empty Snap token")
+	}
+	if snapResp.RedirectURL == "" {
+		t.Errorf("expected non-empty Redirect URL")
+	}
 }
