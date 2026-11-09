@@ -129,6 +129,12 @@ func TestOTPEmailTemplateAndRendering(t *testing.T) {
 	if !strings.Contains(htmlBody, "10 menit") {
 		t.Errorf("HTML body missing expiry minutes notice")
 	}
+	if !strings.Contains(htmlBody, "instagram.png") || !strings.Contains(htmlBody, "facebook.png") {
+		t.Errorf("HTML body missing social media icons")
+	}
+	if !strings.Contains(htmlBody, "https://www.instagram.com/tikeria.id") || !strings.Contains(htmlBody, "https://www.facebook.com/tikeria.id") {
+		t.Errorf("HTML body missing social media link URLs")
+	}
 	if !strings.Contains(textBody, "849201") {
 		t.Errorf("plain text body missing OTP code")
 	}

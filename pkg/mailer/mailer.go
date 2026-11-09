@@ -1,11 +1,15 @@
 package mailer
 
 import (
+	"bytes"
 	"crypto/tls"
+	"encoding/base64"
 	"fmt"
 	"log"
+	"mime/quotedprintable"
 	"net"
 	"net/smtp"
+	"os"
 	"strings"
 	"time"
 
@@ -21,6 +25,9 @@ type smtpMailer struct {
 }
 
 func NewMailer(cfg *config.AppConfig) Mailer {
+	if cfg == nil {
+		cfg = config.LoadConfig()
+	}
 	return &smtpMailer{cfg: cfg}
 }
 
@@ -31,10 +38,25 @@ func (m *smtpMailer) SendOTPEmail(recipientEmail, recipientName, otpCode string)
 		return nil
 	}
 
+	assetBaseURL := strings.TrimSpace(os.Getenv("EMAIL_ASSET_BASE_URL"))
+	if assetBaseURL == "" {
+		// Default to high-speed public CDN so images load inline without triggering email attachments
+		assetBaseURL = "https://cdn.jsdelivr.net/gh/Lutfi1i/tikeria-be@main/pkg/mailer/assets/"
+	}
+
+	useCID := assetBaseURL == "cid:"
+	assetURL := assetBaseURL
+	if !useCID && !strings.HasSuffix(assetURL, "/") {
+		assetURL += "/"
+	}
+
 	htmlBody, textBody, err := RenderOTPEmail(OTPTemplateData{
 		RecipientName: recipientName,
 		OTPCode:       otpCode,
 		ExpiryMinutes: m.cfg.OTPExpiryMinutes,
+		AssetURL:      assetURL,
+		InstagramURL:  "https://www.instagram.com/tikeria.id",
+		FacebookURL:   "https://www.facebook.com/tikeria.id",
 		SupportEmail:  "support@tikeria.id",
 	})
 	if err != nil {
@@ -47,31 +69,91 @@ func (m *smtpMailer) SendOTPEmail(recipientEmail, recipientName, otpCode string)
 	}
 	subject := fmt.Sprintf("Kode OTP Tikeria: %s", otpCode)
 
-	boundary := fmt.Sprintf("=_tikeria_%d", time.Now().UnixNano())
-
 	var msg bytesBuffer
 	msg.WriteString(fmt.Sprintf("From: Tikeria <%s>\r\n", from))
 	msg.WriteString(fmt.Sprintf("To: %s\r\n", recipientEmail))
 	msg.WriteString(fmt.Sprintf("Subject: %s\r\n", subject))
 	msg.WriteString("MIME-Version: 1.0\r\n")
-	msg.WriteString(fmt.Sprintf("Content-Type: multipart/alternative; boundary=\"%s\"\r\n", boundary))
-	msg.WriteString("\r\n")
 
-	// Plain text part
-	msg.WriteString(fmt.Sprintf("--%s\r\n", boundary))
-	msg.WriteString("Content-Type: text/plain; charset=\"UTF-8\"\r\n")
-	msg.WriteString("Content-Transfer-Encoding: 7bit\r\n\r\n")
-	msg.WriteString(textBody)
-	msg.WriteString("\r\n\r\n")
+	relatedBoundary := fmt.Sprintf("=_tikeria_rel_%d", time.Now().UnixNano())
+	altBoundary := fmt.Sprintf("=_tikeria_alt_%d", time.Now().UnixNano())
 
-	// HTML part
-	msg.WriteString(fmt.Sprintf("--%s\r\n", boundary))
-	msg.WriteString("Content-Type: text/html; charset=\"UTF-8\"\r\n")
-	msg.WriteString("Content-Transfer-Encoding: 7bit\r\n\r\n")
-	msg.WriteString(htmlBody)
-	msg.WriteString("\r\n\r\n")
+	encodeQP := func(s string) string {
+		var buf bytes.Buffer
+		w := quotedprintable.NewWriter(&buf)
+		_, _ = w.Write([]byte(s))
+		_ = w.Close()
+		return buf.String()
+	}
 
-	msg.WriteString(fmt.Sprintf("--%s--\r\n", boundary))
+	if useCID {
+		// When CID mode is requested: use multipart/related with explicit type
+		msg.WriteString(fmt.Sprintf("Content-Type: multipart/related; type=\"multipart/alternative\"; boundary=\"%s\"\r\n\r\n", relatedBoundary))
+
+		// Nested multipart/alternative for text and html
+		msg.WriteString(fmt.Sprintf("--%s\r\n", relatedBoundary))
+		msg.WriteString(fmt.Sprintf("Content-Type: multipart/alternative; boundary=\"%s\"\r\n\r\n", altBoundary))
+
+		// Plain text part
+		msg.WriteString(fmt.Sprintf("--%s\r\n", altBoundary))
+		msg.WriteString("Content-Type: text/plain; charset=\"UTF-8\"\r\n")
+		msg.WriteString("Content-Transfer-Encoding: quoted-printable\r\n\r\n")
+		msg.WriteString(encodeQP(textBody))
+		msg.WriteString("\r\n")
+
+		// HTML part
+		msg.WriteString(fmt.Sprintf("--%s\r\n", altBoundary))
+		msg.WriteString("Content-Type: text/html; charset=\"UTF-8\"\r\n")
+		msg.WriteString("Content-Transfer-Encoding: quoted-printable\r\n\r\n")
+		msg.WriteString(encodeQP(htmlBody))
+		msg.WriteString("\r\n")
+
+		msg.WriteString(fmt.Sprintf("--%s--\r\n", altBoundary))
+
+		// Attach inline images
+		imageNames := []string{"mark.png", "stripes.png", "mail.png", "confetti.png", "instagram.png", "facebook.png"}
+		for _, name := range imageNames {
+			data, err := GetEmbeddedAsset(name)
+			if err != nil {
+				continue
+			}
+			b64 := base64.StdEncoding.EncodeToString(data)
+
+			msg.WriteString(fmt.Sprintf("--%s\r\n", relatedBoundary))
+			msg.WriteString(fmt.Sprintf("Content-Type: image/png; name=\"%s\"\r\n", name))
+			msg.WriteString("Content-Transfer-Encoding: base64\r\n")
+			msg.WriteString(fmt.Sprintf("Content-ID: <%s@tikeria.id>\r\n", name))
+			msg.WriteString("Content-Disposition: inline\r\n\r\n")
+
+			for i := 0; i < len(b64); i += 76 {
+				end := i + 76
+				if end > len(b64) {
+					end = len(b64)
+				}
+				msg.WriteString(b64[i:end] + "\r\n")
+			}
+		}
+
+		msg.WriteString(fmt.Sprintf("--%s--\r\n", relatedBoundary))
+	} else {
+		// Production standard: multipart/alternative without file attachments
+		// Images load directly via CDN inside the HTML body without cluttering email attachments
+		msg.WriteString(fmt.Sprintf("Content-Type: multipart/alternative; boundary=\"%s\"\r\n\r\n", altBoundary))
+
+		msg.WriteString(fmt.Sprintf("--%s\r\n", altBoundary))
+		msg.WriteString("Content-Type: text/plain; charset=\"UTF-8\"\r\n")
+		msg.WriteString("Content-Transfer-Encoding: quoted-printable\r\n\r\n")
+		msg.WriteString(encodeQP(textBody))
+		msg.WriteString("\r\n")
+
+		msg.WriteString(fmt.Sprintf("--%s\r\n", altBoundary))
+		msg.WriteString("Content-Type: text/html; charset=\"UTF-8\"\r\n")
+		msg.WriteString("Content-Transfer-Encoding: quoted-printable\r\n\r\n")
+		msg.WriteString(encodeQP(htmlBody))
+		msg.WriteString("\r\n")
+
+		msg.WriteString(fmt.Sprintf("--%s--\r\n", altBoundary))
+	}
 
 	addr := fmt.Sprintf("%s:%d", m.cfg.SMTPHost, m.cfg.SMTPPort)
 
@@ -122,7 +204,6 @@ func (m *smtpMailer) SendOTPEmail(recipientEmail, recipientName, otpCode string)
 		auth = smtp.PlainAuth("", m.cfg.SMTPUser, m.cfg.SMTPPassword, m.cfg.SMTPHost)
 	}
 
-	// Try standard SendMail with timeout dialer
 	err = sendMailWithStartTLS(addr, auth, from, []string{recipientEmail}, msg.Bytes(), m.cfg.SMTPHost)
 	if err != nil {
 		log.Printf("[SMTP ERROR] Failed to send email to %s: %v", recipientEmail, err)
