@@ -80,7 +80,7 @@ func LoadConfig() *AppConfig {
 		SMTPHost:          strings.TrimSpace(os.Getenv("SMTP_HOST")),
 		SMTPPort:          smtpPort,
 		SMTPUser:          strings.TrimSpace(os.Getenv("SMTP_USER")),
-		SMTPPassword:      strings.TrimSpace(os.Getenv("SMTP_PASSWORD")),
+		SMTPPassword:      strings.ReplaceAll(strings.TrimSpace(os.Getenv("SMTP_PASSWORD")), " ", ""),
 		SMTPFrom:          smtpFrom,
 		OTPExpiryMinutes:  otpExpiry,
 	}

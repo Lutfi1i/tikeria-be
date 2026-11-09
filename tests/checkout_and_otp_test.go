@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
+	"github.com/joho/godotenv"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -402,4 +404,56 @@ func TestCheckoutHoldSummaryOrderAndPaymentLifecycle(t *testing.T) {
 	if ticket.Available != 8 {
 		t.Fatalf("expected available restored to 8 after release, got %d", ticket.Available)
 	}
+}
+
+
+func TestLiveSendOTPToNabil(t *testing.T) {
+	if os.Getenv("LIVE_SMTP_TEST") != "1" {
+		t.Skip("skipping live SMTP test unless LIVE_SMTP_TEST=1")
+	}
+
+	_ = godotenv.Load("../.env")
+	cfg := config.LoadConfig()
+	db := config.InitDatabase()
+
+	targetEmail := "nabilnaufal316@gmail.com"
+	targetName := "Nabil Naufal"
+
+	userRepo := repositories.NewUserRepository(db)
+	otp, err := utils.GenerateNumericOTP(6)
+	if err != nil {
+		t.Fatalf("failed to generate OTP: %v", err)
+	}
+	exp := time.Now().Add(time.Duration(cfg.OTPExpiryMinutes) * time.Minute)
+
+	existing, _ := userRepo.FindByEmail(targetEmail)
+	if existing == nil {
+		hashed, _ := utils.HashPassword("Tikeria123!")
+		newUser := models.User{
+			Name:          targetName,
+			Email:         targetEmail,
+			Password:      hashed,
+			Role:          "buyer",
+			EmailVerified: false,
+			OTPCode:       otp,
+			OTPExpiresAt:  &exp,
+		}
+		if err := userRepo.Create(&newUser); err != nil {
+			t.Fatalf("failed to create user in DB: %v", err)
+		}
+		t.Logf("Registered new user %s (ID=%d) with OTP=%s", targetEmail, newUser.ID, otp)
+	} else {
+		existing.OTPCode = otp
+		existing.OTPExpiresAt = &exp
+		if err := userRepo.Update(existing); err != nil {
+			t.Fatalf("failed to update user OTP in DB: %v", err)
+		}
+		t.Logf("Updated existing user %s (ID=%d) with fresh OTP=%s", targetEmail, existing.ID, otp)
+	}
+
+	m := mailer.NewMailer(cfg)
+	if err := m.SendOTPEmail(targetEmail, targetName, otp); err != nil {
+		t.Fatalf("SMTP send failed: %v", err)
+	}
+	t.Logf("Successfully sent HTML OTP email (%s) to %s via %s:%d", otp, targetEmail, cfg.SMTPHost, cfg.SMTPPort)
 }
