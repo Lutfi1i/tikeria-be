@@ -311,3 +311,39 @@ func (c *CheckoutController) SimulatePaymentSuccess(ctx *gin.Context) {
 		Data:    resp,
 	})
 }
+
+
+// HandleNotification godoc
+// @Summary      Midtrans Payment Notification Webhook
+// @Description  Receive HTTP POST webhook notification from Midtrans
+// @Tags         Payment
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} dto.WebResponse
+// @Router       /api/payments/notification [post]
+func (c *CheckoutController) HandleNotification(ctx *gin.Context) {
+	var payload map[string]interface{}
+	if err := ctx.ShouldBindJSON(&payload); err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.WebResponse{
+			Success: false,
+			Message: "Invalid webhook payload",
+			Errors:  err.Error(),
+		})
+		return
+	}
+
+	resp, err := c.checkoutService.HandleMidtransNotification(payload)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, dto.WebResponse{
+			Success: false,
+			Message: err.Error(),
+		})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.WebResponse{
+		Success: true,
+		Message: "Notification handled successfully",
+		Data:    resp,
+	})
+}

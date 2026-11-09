@@ -35,5 +35,7 @@ func RegisterCheckoutRoutes(group *gin.RouterGroup, checkoutController *controll
 	payments := group.Group("/payments")
 	{
 		payments.POST("/:order_id/simulate-success", checkoutController.SimulatePaymentSuccess)
+		payments.POST("/notification", checkoutController.HandleNotification)
+		payments.POST("/midtrans-notification", checkoutController.HandleNotification)
 	}
 }

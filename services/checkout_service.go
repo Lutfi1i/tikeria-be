@@ -12,6 +12,7 @@ import (
 	"tikeria-be/dto"
 	"tikeria-be/models"
 	"tikeria-be/pkg/frappe"
+	"tikeria-be/pkg/payment"
 	"tikeria-be/repositories"
 	"tikeria-be/utils"
 )
@@ -24,12 +25,14 @@ type CheckoutService interface {
 	CreateOrder(userID uint, req dto.CreateOrderRequest) (*dto.CreateOrderResponse, error)
 	GetOrderStatus(identifier string) (*dto.OrderStatusResponse, error)
 	SimulatePaymentSuccess(identifier string) (*dto.OrderStatusResponse, error)
+	HandleMidtransNotification(payload map[string]interface{}) (*dto.OrderStatusResponse, error)
 }
 
 type checkoutService struct {
 	checkoutRepo repositories.CheckoutRepository
 	eventRepo    repositories.EventRepository
 	userRepo     repositories.UserRepository
+	midtrans     payment.MidtransClient
 	cfg          *config.AppConfig
 }
 
@@ -46,6 +49,7 @@ func NewCheckoutService(
 		checkoutRepo: checkoutRepo,
 		eventRepo:    eventRepo,
 		userRepo:     userRepo,
+		midtrans:     payment.NewMidtransClient(cfg),
 		cfg:          cfg,
 	}
 }
@@ -408,6 +412,16 @@ func (s *checkoutService) CreateOrder(userID uint, req dto.CreateOrderRequest) (
 		"payment_method": payment.PaymentMethod,
 	})
 
+	snapToken := ""
+	redirectURL := ""
+	if s.midtrans != nil {
+		snapRes, err := s.midtrans.CreateSnapTransaction(&order, participant)
+		if err == nil && snapRes != nil {
+			snapToken = snapRes.Token
+			redirectURL = snapRes.RedirectURL
+		}
+	}
+
 	return &dto.CreateOrderResponse{
 		OrderID:       order.OrderCode,
 		InvoiceNumber: order.InvoiceNumber,
@@ -421,7 +435,9 @@ func (s *checkoutService) CreateOrder(userID uint, req dto.CreateOrderRequest) (
 			Amount:        payment.Amount,
 			PaymentMethod: payment.PaymentMethod,
 		},
-		ExpiredAt: dto.FormatTimeRFC3339(expiredAt),
+		SnapToken:   snapToken,
+		RedirectURL: redirectURL,
+		ExpiredAt:   dto.FormatTimeRFC3339(expiredAt),
 	}, nil
 }
 
@@ -494,4 +510,45 @@ func (s *checkoutService) SimulatePaymentSuccess(identifier string) (*dto.OrderS
 	}
 
 	return s.GetOrderStatus(identifier)
+}
+
+
+func (s *checkoutService) HandleMidtransNotification(payload map[string]interface{}) (*dto.OrderStatusResponse, error) {
+	orderIDVal, ok := payload["order_id"]
+	if !ok {
+		return nil, errors.New("order_id missing in notification payload")
+	}
+	orderID := fmt.Sprintf("%v", orderIDVal)
+
+	txStatus := fmt.Sprintf("%v", payload["transaction_status"])
+	fraudStatus := fmt.Sprintf("%v", payload["fraud_status"])
+	paymentType := fmt.Sprintf("%v", payload["payment_type"])
+
+	order, err := s.checkoutRepo.FindOrderByIDOrCodeOrInvoice(orderID)
+	if err != nil || order == nil {
+		return nil, fmt.Errorf("order %s not found", orderID)
+	}
+
+	if txStatus == "capture" {
+		if fraudStatus == "accept" {
+			if order.Payment != nil {
+				order.Payment.PaymentMethod = paymentType
+			}
+			return s.SimulatePaymentSuccess(orderID)
+		}
+	} else if txStatus == "settlement" {
+		if order.Payment != nil {
+			order.Payment.PaymentMethod = paymentType
+		}
+		return s.SimulatePaymentSuccess(orderID)
+	} else if txStatus == "cancel" || txStatus == "deny" || txStatus == "expire" {
+		order.Status = "Cancelled"
+		_ = s.checkoutRepo.UpdateOrder(order)
+		if order.Payment != nil {
+			order.Payment.Status = "Failed"
+			_ = s.checkoutRepo.UpdatePayment(order.Payment)
+		}
+	}
+
+	return s.GetOrderStatus(orderID)
 }

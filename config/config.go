@@ -22,6 +22,9 @@ type AppConfig struct {
 	SMTPPassword      string
 	SMTPFrom          string
 	OTPExpiryMinutes  int
+	MidtransServerKey string
+	MidtransClientKey string
+	MidtransIsProd    bool
 }
 
 func LoadConfig() *AppConfig {
@@ -83,5 +86,8 @@ func LoadConfig() *AppConfig {
 		SMTPPassword:      strings.ReplaceAll(strings.TrimSpace(os.Getenv("SMTP_PASSWORD")), " ", ""),
 		SMTPFrom:          smtpFrom,
 		OTPExpiryMinutes:  otpExpiry,
+		MidtransServerKey: strings.TrimSpace(os.Getenv("MIDTRANS_SERVER_KEY")),
+		MidtransClientKey: strings.TrimSpace(os.Getenv("MIDTRANS_CLIENT_KEY")),
+		MidtransIsProd:    strings.EqualFold(strings.TrimSpace(os.Getenv("MIDTRANS_IS_PRODUCTION")), "true"),
 	}
 }

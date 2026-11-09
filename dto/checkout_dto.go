@@ -98,6 +98,8 @@ type CreateOrderResponse struct {
 	ServiceFee    float64        `json:"service_fee"`
 	TotalAmount   float64        `json:"total_amount"`
 	Payment       PaymentSummary `json:"payment"`
+	SnapToken     string         `json:"snap_token,omitempty"`
+	RedirectURL   string         `json:"redirect_url,omitempty"`
 	ExpiredAt     string         `json:"expired_at"`
 }
 
