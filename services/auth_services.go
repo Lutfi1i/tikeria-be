@@ -74,11 +74,6 @@ func (s *authService) Register(req dto.RegisterRequest) (*dto.UserResponse, erro
 		return nil, errors.New("confirm_password does not match password")
 	}
 
-	existingUser, _ := s.userRepo.FindByEmail(req.Email)
-	if existingUser != nil {
-		return nil, errors.New("email was already registered, try other email")
-	}
-
 	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
 		return nil, errors.New("Failed to proceed password")
@@ -100,6 +95,31 @@ func (s *authService) Register(req dto.RegisterRequest) (*dto.UserResponse, erro
 		otp = "123456"
 	}
 	exp := time.Now().Add(time.Duration(s.cfg.OTPExpiryMinutes) * time.Minute)
+
+	existingUser, _ := s.userRepo.FindByEmail(req.Email)
+	if existingUser != nil {
+		if existingUser.EmailVerified {
+			return nil, errors.New("email was already registered, try other email")
+		}
+		// User previously registered but never verified OTP:
+		// Refresh credentials, generate fresh OTP, and resend email
+		existingUser.Name = name
+		existingUser.Password = hashedPassword
+		existingUser.Role = role
+		existingUser.OTPCode = otp
+		existingUser.OTPExpiresAt = &exp
+		if err := s.userRepo.Update(existingUser); err != nil {
+			return nil, errors.New("failed to update registration")
+		}
+
+		if s.mail != nil {
+			go func(toEmail, toName, code string) {
+				_ = s.mail.SendOTPEmail(toEmail, toName, code)
+			}(existingUser.Email, existingUser.Name, otp)
+		}
+
+		return toUserResponse(existingUser), nil
+	}
 
 	user := models.User{
 		Name:          name,
@@ -150,11 +170,6 @@ func (s *authService) RegisterOrganizer(req dto.OrganizerRegisterRequest) (*dto.
 		return nil, errors.New("institution and city are required for school_campus organizer")
 	}
 
-	existingUser, _ := s.userRepo.FindByEmail(req.Email)
-	if existingUser != nil {
-		return nil, errors.New("email was already registered, try other email")
-	}
-
 	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
 		return nil, errors.New("failed to hash password")
@@ -165,6 +180,35 @@ func (s *authService) RegisterOrganizer(req dto.OrganizerRegisterRequest) (*dto.
 		otp = "123456"
 	}
 	exp := time.Now().Add(time.Duration(s.cfg.OTPExpiryMinutes) * time.Minute)
+
+	existingUser, _ := s.userRepo.FindByEmail(req.Email)
+	if existingUser != nil {
+		if existingUser.EmailVerified {
+			return nil, errors.New("email was already registered, try other email")
+		}
+		// User previously registered but never verified OTP:
+		// Refresh credentials, generate fresh OTP, and resend email
+		existingUser.Name = name
+		existingUser.Password = hashedPassword
+		existingUser.Role = "organizer"
+		existingUser.WhatsApp = req.WhatsApp
+		existingUser.OrganizerType = orgType
+		existingUser.Institution = req.Institution
+		existingUser.City = req.City
+		existingUser.OTPCode = otp
+		existingUser.OTPExpiresAt = &exp
+		if err := s.userRepo.Update(existingUser); err != nil {
+			return nil, errors.New("failed to update registration")
+		}
+
+		if s.mail != nil {
+			go func(toEmail, toName, code string) {
+				_ = s.mail.SendOTPEmail(toEmail, toName, code)
+			}(existingUser.Email, existingUser.Name, otp)
+		}
+
+		return toUserResponse(existingUser), nil
+	}
 
 	user := models.User{
 		Name:          name,
@@ -387,6 +431,10 @@ func (s *authService) Login(req dto.LoginRequest) (*dto.LoginResponse, error) {
 
 	if !utils.CheckPasswordHash(req.Password, user.Password) {
 		return nil, errors.New("email or password wrong")
+	}
+
+	if !user.EmailVerified {
+		return nil, errors.New("email is not verified yet, please verify your email with OTP")
 	}
 
 	token, err := utils.GenerateJWT(user.ID, user.Email, user.Role)
